@@ -22,9 +22,11 @@ export default async function AppLayout({
     .eq("id", user!.id)
     .single()
 
+  const avatarUrl = (user?.user_metadata?.avatar_url as string | undefined) ?? null
+
   return (
     <SidebarProvider>
-      <AppSidebar clients={(clients as Client[]) ?? []} fullName={profile?.full_name ?? ""} />
+      <AppSidebar clients={(clients as Client[]) ?? []} fullName={profile?.full_name ?? ""} avatarUrl={avatarUrl} />
       <SidebarInset>
         <header className="flex h-14 items-center gap-2 border-b px-4">
           <SidebarTrigger />

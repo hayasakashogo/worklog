@@ -136,7 +136,7 @@ export function ExportPdfButton({
       </Button>
 
       <Dialog open={previewOpen} onOpenChange={(o) => { if (!o) handleClose() }}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+        <DialogContent className="sm:max-w-6xl h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>稼働報告書プレビュー</DialogTitle>
           </DialogHeader>
