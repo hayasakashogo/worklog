@@ -49,17 +49,18 @@ npm run test:watch   # テスト実行（ウォッチモード）
 - `lib/supabase/middleware.ts` — `proxy.ts` から呼ばれるセッション更新ヘルパー
 - `time_records` テーブルで Supabase Realtime を有効化（タブ間のリアルタイム同期）
 
-### データベース（3テーブル、すべて RLS `auth.uid() = user_id`）
+### データベース（4テーブル、すべて RLS `auth.uid() = user_id`）
 - **profiles** — `auth.users` への INSERT 時にトリガーで自動作成。フィールド: `id`, `full_name`
 - **clients** — ユーザーごとのクライアント設定。`holidays`（int[]、休日曜日）、`include_national_holidays`（bool）、`default_start_time/end_time/rest_minutes`、`min_hours/max_hours`、`pdf_filename_template`
 - **time_records** — 日次の勤怠記録。`(client_id, date)` のユニーク制約あり。`start_time`/`end_time` は nullable な time 型、`rest_minutes` は integer、`is_off` は boolean（休み）、`note` は text（業務内容・備考）
+- **monthly_notes** — 月次備考。`(user_id, client_id, year_month)` のユニーク制約あり。`year_month` は `YYYY-MM` 形式の text、`note` は text
 - スキーマ SQL: `supabase/schema.sql`
 - マイグレーションは Supabase MCP で管理
 
 ### 主要ユーティリティ
 - `lib/time-utils.ts` — `floorToFiveMinutes()`（打刻時刻を5分単位で切り捨て）、`floorTimeStringToFiveMinutes()`（HH:MM 形式の文字列を5分単位で切り捨て）、`calcWorkingHours()`、`formatHoursToHHMM()`、`timeToMinutes()`、`todayString()`
 - `lib/holidays.ts` — `japanese-holidays` ライブラリのラッパー。`isHoliday()` は boolean、`getHolidayLabel()` は祝日名、`getDaysInMonth()`、`getWeekdayLabel()`、`isClientHoliday()`（クライアント設定の曜日休日・祝日設定を考慮した休日判定）を提供
-- `lib/pdf/generate-report.ts` — jspdf + jspdf-autotable で稼働報告書 PDF を生成。NotoSansJP フォントを `/public/fonts/` から読み込み
+- `lib/pdf/generate-report.ts` — jspdf + jspdf-autotable で稼働報告書 PDF を生成。NotoSansJP フォントを `/public/fonts/` から読み込み。備考欄はページ幅50%の枠線付きで常に描画（空でも表示）し、改行・折り返しに対応
 
 ### 主要コンポーネント
 - `components/auth/auth-form.tsx` — 認証フォーム共通ユーティリティ。`handleGoogleAuth()`（Google OAuth 開始）・`localizeError(message)`（Supabase エラーの日本語化）・`GoogleAuthButton`・`FormDivider` を提供。ログイン・サインアップページで共用
@@ -67,9 +68,9 @@ npm run test:watch   # テスト実行（ウォッチモード）
 - `components/layout/theme-toggle.tsx` — ダークモード切り替えボタン（Sun/Moon アイコン）。`app/(app)/layout.tsx` のヘッダー右端（`ml-auto`）に配置
 - `components/dashboard/clock-display.tsx` — リアルタイムクロック表示（1秒ごとに更新）。ハイドレーション対策で初期値を `null` にしクライアントマウント後に時刻をセット。日付（年月日・曜日）と時刻（HH:MM:SS）を表示し、時刻はグラデーションテキスト（`bg-gradient-to-br from-foreground to-foreground/60`）で描画
 - `components/dashboard/punch-buttons.tsx` — 出退勤ボタン。`client` と `initialRecord` を props で受け取り、Realtime でライブ更新。`is_off`（本日休み）チェックボックス・`note`（業務内容・備考）テキストエリア（onBlur 保存）を備える。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` 初期値に反映。ステータスに応じたカードのグラデーションバーと状態バッジ（出勤中はパルスアニメーション）を表示
-- `components/records/records-page-content.tsx` — 勤怠一覧ページの Client Component。PDF出力時の勤怠漏れチェック結果（`highlightDates`）を状態管理し、漏れがある場合は警告バナーを表示。`MonthlyTable` と `ExportPdfButton` を組み合わせる
-- `components/records/monthly-table.tsx` — 月次勤怠テーブル。`client`, `initialRecords`, `year`, `month`, `highlightDates?` を props で受け取り、月切り替えは `router.push` でURL遷移。列構成: 日・曜日（祝日名をサブテキストで表示）・休みチェックボックス・開始・終了・休憩・稼働時間・業務内容備考。セルはクリックで編集モードに入るインライン編集方式（`renderEditableCell`）で、`note` 列はクリックで `Textarea`、時刻・数値列は `Input` に切り替わる。開始・終了時刻は5分刻み（`step={300}`）、休憩は5分刻み数値入力。保存時に `floorTimeStringToFiveMinutes()` で時刻を5分単位に切り捨て。ヘッダーに合計稼働時間・標準工数範囲・推定稼働時間を表示。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` デフォルト値に反映。Realtime でタブ間同期。`highlightDates` に含まれる日付のセルは赤枠強調表示
-- `components/records/export-pdf-button.tsx` — PDF出力ボタン。`client`, `year`, `month`, `onMissingCheck` を props で受け取る。クリック時にまず稼働データ有無を確認（なければ sonner でエラートースト「この月には稼働データがありません」を表示して終了）。次に勤怠漏れチェック（`computeMissingDates`）を実行し（過去・今日・未来日を問わず非休日の勤務日でレコードがない or 未入力を漏れとみなす）、漏れがあれば `onMissingCheck` コールバックに日付リストを渡して終了。漏れがなければ `generateReportBlobUrl` で PDF を生成してプレビューダイアログ（`<Dialog>` + `<iframe>`）を開き、ダイアログ内のダウンロードボタンで `generateReport` を呼び出してファイル保存する
+- `components/records/records-page-content.tsx` — 勤怠一覧ページの Client Component。`initialNote?` prop を受け取り `MonthlyTable` に転送。PDF出力時の勤怠漏れチェック結果（`highlightDates`）を状態管理し、漏れがある場合は警告バナーを表示。`MonthlyTable` と `ExportPdfButton` を組み合わせる
+- `components/records/monthly-table.tsx` — 月次勤怠テーブル。`client`, `initialRecords`, `year`, `month`, `highlightDates?`, `initialNote?` を props で受け取り、月切り替えは `router.push` でURL遷移。列構成: 日・曜日（祝日名をサブテキストで表示）・休みチェックボックス・開始・終了・休憩・稼働時間・業務内容備考。セルはクリックで編集モードに入るインライン編集方式（`renderEditableCell`）で、`note` 列はクリックで `Textarea`、時刻・数値列は `Input` に切り替わる。開始・終了時刻は5分刻み（`step={300}`）、休憩は5分刻み数値入力。保存時に `floorTimeStringToFiveMinutes()` で時刻を5分単位に切り捨て。ヘッダーに合計稼働時間・標準工数範囲・推定稼働時間を表示。合計稼働時間の下に月次備考 `Textarea`（onBlur で `monthly_notes` に upsert）を表示。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` デフォルト値に反映。Realtime でタブ間同期。`highlightDates` に含まれる日付のセルは赤枠強調表示
+- `components/records/export-pdf-button.tsx` — PDF出力ボタン。`client`, `year`, `month`, `onMissingCheck` を props で受け取る。クリック時にまず稼働データ有無を確認（なければ sonner でエラートースト「この月には稼働データがありません」を表示して終了）。次に勤怠漏れチェック（`computeMissingDates`）を実行し（過去・今日・未来日を問わず非休日の勤務日でレコードがない or 未入力を漏れとみなす）、漏れがあれば `onMissingCheck` コールバックに日付リストを渡して終了。漏れがなければ `fetchData()` 内で `monthly_notes` も取得し `remarks` として `generateReportBlobUrl` に渡して PDF を生成、プレビューダイアログ（`<Dialog>` + `<iframe>`）を開く。ダイアログ内のダウンロードボタンで `generateReport` を呼び出してファイル保存する
 - `components/clients/clients-page-content.tsx` — クライアント管理画面の Client Component。`clients` と `currentClientId` を props で受け取る。Table レイアウトで一覧表示し、各行にラジオボタン（アクティブクライアント切り替え）・クライアント名・標準工数（min〜max h）・定時（開始〜終了）・休憩分・休み設定（曜日＋祝日）・編集ボタン・削除ボタンを表示。ラジオボタン変更時は `router.push` でクライアント切り替えと `sonner` トースト通知。削除時は confirm ダイアログ表示後 Supabase で削除し、削除対象が現在のクライアントなら `/dashboard` にリダイレクト
 - `components/clients/client-form-dialog.tsx` — クライアント追加・編集フォームダイアログ（`clients-page-content` から利用）
 - `components/setup/setup-wizard.tsx` — 初回セットアップウィザード（Client Component）。2ステップ形式: Step1で氏名を `profiles` に保存、Step2でクライアント情報を `clients` に INSERT して `/dashboard/{id}` に遷移

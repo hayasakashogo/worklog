@@ -44,12 +44,14 @@ export function MonthlyTable({
   year,
   month,
   highlightDates,
+  initialNote,
 }: {
   client: Client
   initialRecords: TimeRecord[]
   year: number
   month: number
   highlightDates?: Set<string>
+  initialNote?: string
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -61,6 +63,8 @@ export function MonthlyTable({
   })
   const [editingCell, setEditingCell] = useState<{ date: string; field: string } | null>(null)
   const [editValue, setEditValue] = useState("")
+  const [monthlyNote, setMonthlyNote] = useState(initialNote ?? "")
+  const [isSavingNote, setIsSavingNote] = useState(false)
 
   const fetchRecords = useCallback(async () => {
     const monthStr = month.toString().padStart(2, "0")
@@ -188,6 +192,22 @@ export function MonthlyTable({
     fetchRecords()
   }
 
+  const saveMonthlyNote = async () => {
+    if (isSavingNote) return
+    setIsSavingNote(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const yearMonth = `${year}-${month.toString().padStart(2, "0")}`
+      await supabase.from("monthly_notes").upsert(
+        { user_id: user.id, client_id: client.id, year_month: yearMonth, note: monthlyNote },
+        { onConflict: "user_id,client_id,year_month" }
+      )
+    } finally {
+      setIsSavingNote(false)
+    }
+  }
+
   const handleCellClick = (dateStr: string, field: string, currentValue: string) => {
     setEditingCell({ date: dateStr, field })
     setEditValue(currentValue)
@@ -310,6 +330,14 @@ export function MonthlyTable({
               </div>
             )}
           </div>
+          <Textarea
+            placeholder="月次備考"
+            value={monthlyNote}
+            onChange={(e) => setMonthlyNote(e.target.value)}
+            onBlur={saveMonthlyNote}
+            className="text-sm resize-none mb-4 max-w-xl"
+            rows={3}
+          />
           <div className="overflow-x-auto border border-border/40 rounded-md">
             <Table className="[&_th]:border-r [&_th:last-child]:border-r-0 [&_th]:border-border/30 [&_td]:border-r [&_td:last-child]:border-r-0 [&_td]:border-border/30">
               <TableHeader>

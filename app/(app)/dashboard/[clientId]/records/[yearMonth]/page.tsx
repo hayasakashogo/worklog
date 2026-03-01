@@ -18,7 +18,7 @@ export default async function RecordsPage({
   const lastDay = new Date(year, month, 0).getDate()
   const endDate = `${year}-${monthStr}-${lastDay.toString().padStart(2, "0")}`
 
-  const [{ data: client }, { data: records }] = await Promise.all([
+  const [{ data: client }, { data: records }, { data: monthlyNote }] = await Promise.all([
     supabase.from("clients").select("*").eq("id", clientId).single(),
     supabase
       .from("time_records")
@@ -26,6 +26,12 @@ export default async function RecordsPage({
       .eq("client_id", clientId)
       .gte("date", startDate)
       .lte("date", endDate),
+    supabase
+      .from("monthly_notes")
+      .select("note")
+      .eq("client_id", clientId)
+      .eq("year_month", yearMonth)
+      .maybeSingle(),
   ])
 
   return (
@@ -34,6 +40,7 @@ export default async function RecordsPage({
       initialRecords={records ?? []}
       year={year}
       month={month}
+      initialNote={monthlyNote?.note ?? ""}
     />
   )
 }

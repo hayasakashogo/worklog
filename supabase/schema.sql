@@ -85,3 +85,19 @@ create policy "Users can delete own time records"
 
 -- Enable Realtime
 alter publication supabase_realtime add table time_records;
+
+-- monthly_notes
+create table if not exists monthly_notes (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  client_id uuid references clients on delete cascade not null,
+  year_month text not null,
+  note text not null default '',
+  created_at timestamptz default now(),
+  unique(user_id, client_id, year_month)
+);
+
+alter table monthly_notes enable row level security;
+
+create policy "Users can manage own monthly_notes"
+  on monthly_notes for all using (auth.uid() = user_id);

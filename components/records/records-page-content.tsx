@@ -27,11 +27,13 @@ export function RecordsPageContent({
   initialRecords,
   year,
   month,
+  initialNote,
 }: {
   client: Client
   initialRecords: TimeRecord[]
   year: number
   month: number
+  initialNote?: string
 }) {
   const [highlightDates, setHighlightDates] = useState<Set<string>>(new Set())
   const [missingDisplay, setMissingDisplay] = useState<string[]>([])
@@ -69,6 +71,7 @@ export function RecordsPageContent({
         year={year}
         month={month}
         highlightDates={highlightDates}
+        initialNote={initialNote}
       />
     </div>
   )

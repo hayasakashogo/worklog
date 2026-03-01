@@ -102,11 +102,35 @@ async function buildReport(params: ReportParams): Promise<jsPDF> {
   y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8
 
   // 備考欄
+  doc.setFontSize(9)
+  doc.text("備考：", marginLeft, y)
+  y += 5
+
+  const boxX = marginLeft
+  const boxWidth = (pageWidth - marginLeft * 2) * 0.5
+  const innerPadding = 3
+  const lineHeight = 5
+
+  let remarksLines: string[] = []
   if (remarks) {
-    doc.setFontSize(9)
-    doc.text(`備考: ${remarks}`, marginLeft, y)
-    y += 8
+    const maxWidth = boxWidth - innerPadding * 2
+    remarks.split("\n").forEach((line) => {
+      const split = doc.splitTextToSize(line || " ", maxWidth)
+      remarksLines.push(...split)
+    })
   }
+
+  const minLines = 3
+  const lineCount = Math.max(remarksLines.length, minLines)
+  const boxHeight = lineCount * lineHeight + innerPadding * 2
+
+  doc.rect(boxX, y, boxWidth, boxHeight)
+
+  if (remarksLines.length > 0) {
+    doc.text(remarksLines, boxX + innerPadding, y + innerPadding + lineHeight * 0.8)
+  }
+
+  y += boxHeight + 12
 
   // 稼働詳細見出し
   doc.setFontSize(12)
