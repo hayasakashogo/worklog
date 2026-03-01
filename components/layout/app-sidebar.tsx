@@ -1,9 +1,10 @@
 "use client"
 
-import { LayoutDashboard, CalendarDays, Building2, LogOut, Pencil, User } from "lucide-react"
+import { Clock, CalendarDays, Building2, LogOut, Pencil, User } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
+import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import type { Client } from "@/types/client"
 import {
@@ -44,12 +45,16 @@ export function AppSidebar({ clients, fullName }: { clients: Client[]; fullName:
   const currentYearMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}`
 
   const menuItems = [
-    { title: "ダッシュボード", href: `/dashboard/${currentClientId}`, icon: LayoutDashboard },
-    { title: "勤怠一覧", href: `/dashboard/${currentClientId}/records/${currentYearMonth}`, icon: CalendarDays },
-    { title: "クライアント管理", href: `/dashboard/${currentClientId}/clients`, icon: Building2 },
+    { title: "打刻", href: `/dashboard/${currentClientId}`, icon: Clock, exact: true },
+    { title: "勤怠一覧", href: `/dashboard/${currentClientId}/records/${currentYearMonth}`, icon: CalendarDays, exact: false },
+    { title: "クライアント管理", href: `/dashboard/${currentClientId}/clients`, icon: Building2, exact: false },
   ]
 
   const handleClientChange = (newId: string) => {
+    const newClient = clients.find((c) => c.id === newId)
+    if (newClient) {
+      toast.success(`「${newClient.name}」に切り替えました`)
+    }
     // 現在のページ種別を維持しつつクライアントを切り替え
     if (pathname.includes("/records/")) {
       const yearMonthMatch = pathname.match(/\/records\/(\d{4}-\d{2})/)
@@ -143,7 +148,7 @@ export function AppSidebar({ clients, fullName }: { clients: Client[]; fullName:
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                  <SidebarMenuButton asChild isActive={item.exact ? pathname === item.href : pathname.startsWith(item.href)}>
                     <Link href={item.href}>
                       <item.icon />
                       <span>{item.title}</span>

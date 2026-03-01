@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { floorToFiveMinutes, todayString, calcWorkingHours, formatHoursToHHMM } from "@/lib/time-utils"
 import { isClientHoliday } from "@/lib/holidays"
+import { cn } from "@/lib/utils"
 
 type TimeRecord = {
   id: string
@@ -155,6 +156,7 @@ export function PunchButtons({
         client_id: client.id,
         date: todayString(),
         is_off: checked,
+        rest_minutes: restMinutes,
       },
       { onConflict: "client_id,date" }
     )
@@ -174,28 +176,60 @@ export function PunchButtons({
       : null
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div className="flex items-center justify-center gap-4">
-            <div className="space-y-1">
-              <Label>休憩時間</Label>
-              <Input
-                type="number"
-                value={restMinutes}
-                onChange={(e) => setRestMinutes(Number(e.target.value) || 0)}
-                className="w-28"
-                disabled={isOff}
-                step={5}
-                min={0}
-              />
-            </div>
+    <div className="space-y-4">
+      {/* メインカード */}
+      <Card className="overflow-hidden shadow-md">
+        <div
+          className={cn(
+            "h-1 w-full bg-gradient-to-r",
+            isOff
+              ? "from-muted-foreground/40 to-muted-foreground/10"
+              : status === "working"
+              ? "from-primary to-primary/30"
+              : status === "finished"
+              ? "from-muted-foreground/40 to-muted-foreground/10"
+              : "from-muted-foreground/30 to-muted-foreground/10"
+          )}
+        />
+        <CardContent className="pt-6 pb-6 space-y-6">
+          {/* ステータスバッジ */}
+          <div className="flex justify-center">
+            {isOff ? (
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium bg-muted text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+                本日休み
+              </span>
+            ) : status === "not_started" ? (
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium bg-muted text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+                未出勤
+              </span>
+            ) : status === "working" && record?.start_time ? (
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold bg-primary/10 text-primary">
+                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                出勤中　{record.start_time.slice(0, 5)} 〜
+              </span>
+            ) : status === "finished" && record?.start_time && record?.end_time ? (
+              <div className="text-center space-y-1.5">
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold bg-muted text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+                  退勤済み　{record.start_time.slice(0, 5)} 〜 {record.end_time.slice(0, 5)}
+                </span>
+                {workingHours !== null && (
+                  <p className="text-sm text-muted-foreground">
+                    稼働時間{" "}
+                    <span className="font-bold text-base text-foreground">{formatHoursToHHMM(workingHours)}</span>
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
 
-          <div className="flex justify-center gap-4">
+          {/* 打刻ボタン */}
+          <div className="flex justify-center gap-3">
             <Button
               size="lg"
-              className="h-16 px-8 text-lg"
+              className="h-14 px-10 text-base font-semibold rounded-xl shadow-sm"
               onClick={handlePunchIn}
               disabled={loading || status === "working" || status === "finished" || isOff}
             >
@@ -205,7 +239,7 @@ export function PunchButtons({
             <Button
               size="lg"
               variant="outline"
-              className="h-16 px-8 text-lg"
+              className="h-14 px-10 text-base font-semibold rounded-xl"
               onClick={handlePunchOut}
               disabled={loading || status !== "working" || isOff}
             >
@@ -214,40 +248,36 @@ export function PunchButtons({
             </Button>
           </div>
 
-          <div className="text-center">
-            {status === "not_started" && !isOff && (
-              <p className="text-muted-foreground">未出勤</p>
-            )}
-            {status === "working" && record?.start_time && (
-              <p className="text-primary font-semibold">
-                出勤中（{record.start_time.slice(0, 5)} 〜）
-              </p>
-            )}
-            {status === "finished" && record?.start_time && record?.end_time && (
-              <div className="space-y-1">
-                <p className="font-semibold">
-                  退勤済み（{record.start_time.slice(0, 5)} 〜 {record.end_time.slice(0, 5)}）
-                </p>
-                {workingHours !== null && (
-                  <p className="text-muted-foreground">
-                    稼働時間: {formatHoursToHHMM(workingHours)}
-                  </p>
-                )}
-              </div>
-            )}
+          {/* フッター: 休憩時間 + 本日休み */}
+          <div className="flex items-center justify-between pt-2 border-t border-border/50">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">休憩時間</Label>
+              <Input
+                type="number"
+                value={restMinutes}
+                onChange={(e) => setRestMinutes(Number(e.target.value) || 0)}
+                className="w-20 h-8 text-sm"
+                disabled={isOff}
+                step={5}
+                min={0}
+              />
+              <span className="text-xs text-muted-foreground">分</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="is-off"
+                checked={isOff}
+                onCheckedChange={(checked) => handleToggleOff(checked === true)}
+              />
+              <label htmlFor="is-off" className="text-xs text-muted-foreground cursor-pointer">
+                本日休み
+              </label>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="is-off"
-              checked={isOff}
-              onCheckedChange={(checked) => handleToggleOff(checked === true)}
-            />
-            <label htmlFor="is-off" className="text-sm cursor-pointer">本日休み</label>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-sm text-muted-foreground">業務内容・備考</label>
+          {/* 業務内容・備考 */}
+          <div className="space-y-2 pt-2 border-t border-border/50">
+            <label className="text-xs text-muted-foreground">業務内容・備考</label>
             <Textarea
               value={noteValue}
               onChange={(e) => setNoteValue(e.target.value)}
@@ -255,6 +285,7 @@ export function PunchButtons({
               rows={3}
               placeholder="業務内容や備考を入力"
               disabled={noteSaving}
+              className="resize-none text-sm"
             />
           </div>
         </CardContent>

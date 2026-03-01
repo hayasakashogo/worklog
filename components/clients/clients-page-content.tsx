@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import type { Client } from "@/types/client"
 import { ClientFormDialog } from "@/components/clients/client-form-dialog"
@@ -99,13 +100,16 @@ export function ClientsPageContent({
               </TableHeader>
               <TableBody>
                 {clients.map((client) => (
-                  <TableRow key={client.id}>
+                  <TableRow key={client.id} className={client.id === currentClientId ? "bg-primary/10" : ""}>
                     <TableCell>
                       <input
                         type="radio"
                         name="active-client"
                         checked={client.id === currentClientId}
-                        onChange={() => router.push(`/dashboard/${client.id}/clients`)}
+                        onChange={() => {
+                          router.push(`/dashboard/${client.id}/clients`)
+                          toast.success(`「${client.name}」に切り替えました`)
+                        }}
                         className="accent-primary cursor-pointer"
                       />
                     </TableCell>

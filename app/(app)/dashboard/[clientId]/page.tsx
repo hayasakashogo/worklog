@@ -23,8 +23,7 @@ export default async function DashboardPage({
   ])
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <h1 className="text-2xl font-bold">ダッシュボード</h1>
+    <div className="mx-auto max-w-md space-y-6 pt-4">
       <ClockDisplay />
       <PunchButtons client={client as Client} initialRecord={record} />
     </div>

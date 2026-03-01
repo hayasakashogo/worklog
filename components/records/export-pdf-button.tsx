@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { toast } from "sonner"
 import { generateReport, generateReportBlobUrl } from "@/lib/pdf/generate-report"
 import { getDaysInMonth, isClientHoliday } from "@/lib/holidays"
 
@@ -34,14 +35,11 @@ function formatDate(date: Date): string {
 function computeMissingDates(records: TimeRecord[], client: Client, year: number, month: number): string[] {
   const recordMap = new Map(records.map((r) => [r.date, r]))
   const days = getDaysInMonth(year, month)
-  const todayStr = formatDate(new Date())
 
   return days
     .filter((day) => {
-      const dateStr = formatDate(day)
-      if (dateStr >= todayStr) return false
       if (isClientHoliday(day, client)) return false
-      const record = recordMap.get(dateStr)
+      const record = recordMap.get(formatDate(day))
       if (record?.is_off) return false
       return !record || record.start_time === null || record.end_time === null
     })
@@ -91,6 +89,14 @@ export function ExportPdfButton({
     setGenerating(true)
     try {
       const { records, fullName } = await fetchData()
+
+      const hasWorkData = records.some((r) => r.start_time !== null && r.end_time !== null)
+      if (!hasWorkData) {
+        toast.error("この月には稼働データがありません")
+        onMissingCheck([])
+        return
+      }
+
       const missing = computeMissingDates(records, client, year, month)
       onMissingCheck(missing)
 
