@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { getDaysInMonth, getWeekdayLabel, isHoliday, getHolidayLabel, isClientHoliday } from "@/lib/holidays"
-import { calcWorkingHours, formatHoursToHHMM, timeToMinutes } from "@/lib/time-utils"
+import { calcWorkingHours, formatHoursToHHMM, timeToMinutes, floorTimeStringToFiveMinutes } from "@/lib/time-utils"
 
 type TimeRecord = {
   id?: string
@@ -137,7 +137,7 @@ export function MonthlyTable({
     const updateData: Record<string, unknown> = {}
 
     if (field === "start_time" || field === "end_time") {
-      updateData[field] = value || null
+      updateData[field] = value ? floorTimeStringToFiveMinutes(value) : null
     } else if (field === "rest_minutes") {
       updateData[field] = value ? Number(value) : 0
     } else if (field === "note") {
@@ -201,11 +201,11 @@ export function MonthlyTable({
     }
   }
 
-  const renderEditableCell = (dateStr: string, field: string, value: string, type = "text", disabled = false, missing = false) => {
+  const renderEditableCell = (dateStr: string, field: string, value: string, type = "text", disabled = false, missing = false, center = false) => {
     const isEditing = editingCell?.date === dateStr && editingCell?.field === field
 
     if (disabled) {
-      return <span className="block px-1 py-0.5 min-h-[1.5rem] text-muted-foreground/30">&nbsp;</span>
+      return <span className={`block px-2 py-1 min-h-[1.5rem] text-muted-foreground/30${center ? " text-center" : ""}`}>&nbsp;</span>
     }
 
     if (isEditing) {
@@ -229,7 +229,7 @@ export function MonthlyTable({
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={() => saveEdit(dateStr, field, editValue)}
           onKeyDown={(e) => handleKeyDown(e, dateStr, field)}
-          className={`h-7 w-full min-w-0 px-1 text-xs${missing ? " ring-1 ring-destructive border-destructive" : ""}`}
+          className={`h-7 w-full min-w-0 px-1 text-xs${missing ? " ring-1 ring-destructive border-destructive" : ""}${center ? " text-center" : ""}`}
           autoFocus
           step={type === "time" ? 300 : type === "number" ? 5 : undefined}
           min={type === "number" ? 0 : undefined}
@@ -239,8 +239,9 @@ export function MonthlyTable({
 
     return (
       <span
-        className={`block cursor-pointer rounded px-1 py-0.5 hover:bg-accent min-h-[1.5rem]${missing ? " ring-1 ring-destructive" : ""}`}
+        className={`block cursor-pointer rounded px-2 py-1 bg-muted/50 hover:bg-accent min-h-[1.5rem] truncate${missing ? " ring-1 ring-destructive" : ""}${center ? " text-center" : ""}`}
         onClick={() => handleCellClick(dateStr, field, value)}
+        title={value || undefined}
       >
         {value || "\u00A0"}
       </span>
@@ -260,24 +261,22 @@ export function MonthlyTable({
   })
 
   // 推定稼働時間の計算
-  let estimatedHours: number | null = null
-  const today = new Date()
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === month
   const defaultWorkMinutes =
     timeToMinutes(client.default_end_time) -
     timeToMinutes(client.default_start_time) -
     client.default_rest_minutes
   const defaultWorkHours = defaultWorkMinutes / 60
 
-  if (isCurrentMonth) {
-    let remainingWorkDays = 0
-    days.forEach((day) => {
-      if (day.getDate() <= today.getDate()) return
-      if (isClientHoliday(day, client)) return
-      remainingWorkDays++
-    })
-    estimatedHours = totalHours + remainingWorkDays * defaultWorkHours
-  }
+  let unfilledWorkDays = 0
+  days.forEach((day) => {
+    const dateStr = formatDate(day)
+    const record = records.get(dateStr)
+    const isOff = record?.is_off ?? isClientHoliday(day, client)
+    if (isOff) return
+    if (record?.start_time && record?.end_time) return
+    unfilledWorkDays++
+  })
+  const estimatedHours = totalHours + unfilledWorkDays * defaultWorkHours
 
   return (
     <div className="space-y-4">
@@ -304,25 +303,25 @@ export function MonthlyTable({
             <div>
               標準工数: {client.min_hours}〜{client.max_hours}h
             </div>
-            {estimatedHours !== null && (
+            {unfilledWorkDays > 0 && (
               <div>
                 推定稼働時間:{" "}
                 <span className="font-bold">{formatHoursToHHMM(estimatedHours)}</span>
               </div>
             )}
           </div>
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="overflow-x-auto border border-border/40 rounded-md">
+            <Table className="[&_th]:border-r [&_th:last-child]:border-r-0 [&_th]:border-border/30 [&_td]:border-r [&_td:last-child]:border-r-0 [&_td]:border-border/30">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16">日</TableHead>
-                  <TableHead className="w-12">曜</TableHead>
-                  <TableHead className="w-12">休み</TableHead>
-                  <TableHead className="w-24">開始</TableHead>
-                  <TableHead className="w-24">終了</TableHead>
-                  <TableHead className="w-20">休憩</TableHead>
-                  <TableHead className="w-20">稼働</TableHead>
-                  <TableHead>業務内容・備考</TableHead>
+                  <TableHead className="w-px whitespace-nowrap text-center">日</TableHead>
+                  <TableHead className="w-px whitespace-nowrap text-center">曜</TableHead>
+                  <TableHead className="w-px whitespace-nowrap text-center">休み</TableHead>
+                  <TableHead className="w-px whitespace-nowrap text-center">開始</TableHead>
+                  <TableHead className="w-px whitespace-nowrap text-center">終了</TableHead>
+                  <TableHead className="w-px whitespace-nowrap text-center">休憩</TableHead>
+                  <TableHead className="w-px whitespace-nowrap text-center">稼働</TableHead>
+                  <TableHead className="text-center">業務内容・備考</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -354,9 +353,9 @@ export function MonthlyTable({
                       key={dateStr}
                       className={isOffRow ? "bg-muted/50 text-muted-foreground" : undefined}
                     >
-                      <TableCell className="text-xs">{day.getDate()}</TableCell>
+                      <TableCell className="px-3 py-1.5 text-xs whitespace-nowrap text-center">{day.getDate()}</TableCell>
                       <TableCell
-                        className={`text-xs ${
+                        className={`px-3 py-1.5 text-xs text-center ${
                           dow === 0 || isNationalHoliday
                             ? "text-destructive"
                             : dow === 6
@@ -364,30 +363,34 @@ export function MonthlyTable({
                               : ""
                         }`}
                       >
-                        {getWeekdayLabel(day)}
-                        {holidayName && (
-                          <span className="ml-1 text-[10px]">({holidayName})</span>
-                        )}
+                        <div className="flex flex-col items-center leading-tight">
+                          <span>{getWeekdayLabel(day)}</span>
+                          {holidayName && (
+                            <span className="text-[10px]">({holidayName})</span>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className="p-1">
-                        <Checkbox
-                          checked={isOffRow}
-                          onCheckedChange={(checked) => saveIsOff(dateStr, checked === true)}
-                        />
+                      <TableCell className="py-1.5 whitespace-nowrap !px-2">
+                        <div className="flex justify-center">
+                          <Checkbox
+                            checked={isOffRow}
+                            onCheckedChange={(checked) => saveIsOff(dateStr, checked === true)}
+                          />
+                        </div>
                       </TableCell>
-                      <TableCell className="p-1">
-                        {renderEditableCell(dateStr, "start_time", startTime, "time", isOffRow, isMissing && !record?.start_time)}
+                      <TableCell className="px-2 py-1.5 whitespace-nowrap">
+                        {renderEditableCell(dateStr, "start_time", startTime, "time", isOffRow, isMissing && !record?.start_time, true)}
                       </TableCell>
-                      <TableCell className="p-1">
-                        {renderEditableCell(dateStr, "end_time", endTime, "time", isOffRow, isMissing && !record?.end_time)}
+                      <TableCell className="px-2 py-1.5 whitespace-nowrap">
+                        {renderEditableCell(dateStr, "end_time", endTime, "time", isOffRow, isMissing && !record?.end_time, true)}
                       </TableCell>
-                      <TableCell className="p-1">
-                        {renderEditableCell(dateStr, "rest_minutes", record ? String(restMin) : "", "number", isOffRow)}
+                      <TableCell className="px-2 py-1.5 whitespace-nowrap">
+                        {renderEditableCell(dateStr, "rest_minutes", String(restMin), "number", isOffRow, false, true)}
                       </TableCell>
-                      <TableCell className="text-xs">
+                      <TableCell className="px-3 py-1.5 text-xs whitespace-nowrap text-center">
                         {workHours !== null ? formatHoursToHHMM(workHours) : ""}
                       </TableCell>
-                      <TableCell className="p-1">
+                      <TableCell className="p-1 max-w-0">
                         {renderEditableCell(dateStr, "note", note, "text", false)}
                       </TableCell>
                     </TableRow>

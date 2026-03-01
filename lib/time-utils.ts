@@ -9,6 +9,16 @@ export function floorToFiveMinutes(date: Date): string {
 }
 
 /**
+ * HH:MM形式の時刻文字列を5分刻みで切り捨てる
+ * 例: "09:07" → "09:05", "18:13" → "18:10"
+ */
+export function floorTimeStringToFiveMinutes(time: string): string {
+  const [h, m] = time.split(":").map(Number)
+  const minutes = (Math.floor(m / 5) * 5).toString().padStart(2, "0")
+  return `${h.toString().padStart(2, "0")}:${minutes}`
+}
+
+/**
  * HH:MM形式の時間文字列から分数を計算
  */
 export function timeToMinutes(time: string): number {
