@@ -19,11 +19,14 @@ npm run test:watch   # テスト実行（ウォッチモード）
 ## アーキテクチャ
 
 ### ルートグループ
-- `app/(auth)/` — ログイン・サインアップページ（パブリック）。サインアップは email + password のみ（氏名は `/dashboard/new` で収集）
+- `app/(auth)/` — ログイン・サインアップページ（パブリック）。認証方法は email + password と Google OAuth の2方式。サインアップ後の氏名収集は `/dashboard/new` で行う
+  - `app/(auth)/layout.tsx` — 認証ページ共通レイアウト（Work-Log ロゴ・テーマトグル付きヘッダー＋中央揃えコンテンツ）
+  - `app/(auth)/signup/comp/page.tsx` — メール確認案内ページ（signup 成功後にリダイレクト）
+- `app/auth/callback/route.ts` — Google OAuth コールバックハンドラ。Supabase の `exchangeCodeForSession` でセッション確立後 `/dashboard` にリダイレクト
 - `app/(app)/` — 認証済みルート。サイドバーレイアウト付き
 - `app/page.tsx` — ランディングページ（パブリック、未認証でもアクセス可）
 - `app/layout.tsx` — ルートレイアウト。`ThemeProvider`（next-themes）・`TooltipProvider`（shadcn/ui）・`Toaster`（sonner、`toastOptions.style` で `color-mix` を使ったプライマリカラーベースのスタイル）を配置
-- `proxy.ts` — Next.js 16 proxy。未認証ユーザーを `/login` にリダイレクト
+- `proxy.ts` — Next.js 16 proxy。未認証ユーザーを `/login` にリダイレクト。`/auth/callback` はパブリックページとして許可
 
 ### 動的ルーティング（`app/(app)/dashboard/`）
 - `/dashboard` → クライアントがあれば最初の `/dashboard/[clientId]` に、なければ `/dashboard/new` にリダイレクト
@@ -59,7 +62,8 @@ npm run test:watch   # テスト実行（ウォッチモード）
 - `lib/pdf/generate-report.ts` — jspdf + jspdf-autotable で稼働報告書 PDF を生成。NotoSansJP フォントを `/public/fonts/` から読み込み
 
 ### 主要コンポーネント
-- `components/layout/app-sidebar.tsx` — サイドバー。`clients` と `fullName: string` を props で受け取る。ヘッダーに Work-Log ロゴ（`/` へのリンク）・クライアントプルダウン（切り替え時は現在のページ種別を維持しつつ遷移: records ページは同じ yearMonth を保持、clients ページは clients ページへ、それ以外は打刻ページへ）・切り替え時に sonner トースト通知・ユーザーアバター（User アイコン）と表示名インライン編集（鉛筆アイコン → 入力フィールド＋保存/キャンセルボタン、`profiles.full_name` を Supabase で更新）。ナビメニュー（打刻・勤怠一覧・クライアント管理）の下にログアウトボタンを配置。`app/(app)/layout.tsx` が `profiles` から取得した `fullName` を渡す
+- `components/auth/auth-form.tsx` — 認証フォーム共通ユーティリティ。`handleGoogleAuth()`（Google OAuth 開始）・`localizeError(message)`（Supabase エラーの日本語化）・`GoogleAuthButton`・`FormDivider` を提供。ログイン・サインアップページで共用
+- `components/layout/app-sidebar.tsx` — サイドバー。`clients`・`fullName: string`・`avatarUrl?: string` を props で受け取る。`avatarUrl` がある場合は Next.js `Image` で Google プロフィール画像を表示、ない場合は User アイコンにフォールバック。ヘッダーに Work-Log ロゴ（`/` へのリンク）・クライアントプルダウン（切り替え時は現在のページ種別を維持しつつ遷移: records ページは同じ yearMonth を保持、clients ページは clients ページへ、それ以外は打刻ページへ）・切り替え時に sonner トースト通知・ユーザーアバターと表示名インライン編集（鉛筆アイコン → 入力フィールド＋保存/キャンセルボタン、`profiles.full_name` を Supabase で更新）。ナビメニュー（打刻・勤怠一覧・クライアント管理）の下にログアウトボタンを配置。`app/(app)/layout.tsx` が `profiles` から取得した `fullName` と `user.user_metadata.avatar_url` を渡す
 - `components/layout/theme-toggle.tsx` — ダークモード切り替えボタン（Sun/Moon アイコン）。`app/(app)/layout.tsx` のヘッダー右端（`ml-auto`）に配置
 - `components/dashboard/clock-display.tsx` — リアルタイムクロック表示（1秒ごとに更新）。ハイドレーション対策で初期値を `null` にしクライアントマウント後に時刻をセット。日付（年月日・曜日）と時刻（HH:MM:SS）を表示し、時刻はグラデーションテキスト（`bg-gradient-to-br from-foreground to-foreground/60`）で描画
 - `components/dashboard/punch-buttons.tsx` — 出退勤ボタン。`client` と `initialRecord` を props で受け取り、Realtime でライブ更新。`is_off`（本日休み）チェックボックス・`note`（業務内容・備考）テキストエリア（onBlur 保存）を備える。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` 初期値に反映。ステータスに応じたカードのグラデーションバーと状態バッジ（出勤中はパルスアニメーション）を表示
@@ -95,4 +99,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 - コンポーネントファイルは kebab-case、`components/` 配下に機能ごとに整理
 - shadcn/ui コンポーネントは `components/ui/` に配置（style: new-york、icon: lucide）
 - パスエイリアス `@/` はプロジェクトルートを指す（`src/` ではない）
+- フォームバリデーション: `react-hook-form` + `zod`（`@hookform/resolvers` 経由）を使用
+- フォームの送信中状態は `react-hook-form` の `formState.isSubmitting` を使わず `useState` で自前管理する。これにより `router.push` 後もボタンが「処理中」表示のままページ遷移できる
 - ドキュメント: `.docs/要件定義.md`（要件定義）、`.docs/実装プラン.md`（実装プラン）、`.docs/メモ.md`（機能メモ・改善候補）

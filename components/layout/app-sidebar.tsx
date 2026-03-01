@@ -1,6 +1,7 @@
 "use client"
 
 import { Clock, CalendarDays, Building2, LogOut, Pencil, User } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
@@ -28,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
-export function AppSidebar({ clients, fullName }: { clients: Client[]; fullName: string }) {
+export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]; fullName: string; avatarUrl?: string | null }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -132,8 +133,12 @@ export function AppSidebar({ clients, fullName }: { clients: Client[]; fullName:
           </div>
         ) : (
           <div className="flex items-center gap-2 text-sm text-sidebar-foreground/80">
-            <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
-              <User className="h-4 w-4" />
+            <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0 overflow-hidden">
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt="avatar" width={28} height={28} className="h-full w-full object-cover" />
+              ) : (
+                <User className="h-4 w-4" />
+              )}
             </div>
             <span className="flex-1 truncate">{nameValue || "（未設定）"}</span>
             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setIsEditing(true)}>
