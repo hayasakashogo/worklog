@@ -67,8 +67,9 @@ export function ExportPdfButton({
     const startDate = `${year}-${month.toString().padStart(2, "0")}-01`
     const lastDay = new Date(year, month, 0).getDate()
     const endDate = `${year}-${month.toString().padStart(2, "0")}-${lastDay}`
+    const yearMonth = `${year}-${month.toString().padStart(2, "0")}`
 
-    const [recordsResult, profileResult] = await Promise.all([
+    const [recordsResult, profileResult, noteResult] = await Promise.all([
       supabase
         .from("time_records")
         .select("*")
@@ -77,18 +78,25 @@ export function ExportPdfButton({
         .lte("date", endDate)
         .order("date"),
       supabase.from("profiles").select("full_name").single(),
+      supabase
+        .from("monthly_notes")
+        .select("note")
+        .eq("client_id", client.id)
+        .eq("year_month", yearMonth)
+        .maybeSingle(),
     ])
 
     return {
       records: (recordsResult.data ?? []) as TimeRecord[],
       fullName: profileResult.data?.full_name ?? "",
+      remarks: noteResult.data?.note ?? "",
     }
   }
 
   const handleClick = async () => {
     setGenerating(true)
     try {
-      const { records, fullName } = await fetchData()
+      const { records, fullName, remarks } = await fetchData()
 
       const hasWorkData = records.some((r) => r.start_time !== null && r.end_time !== null)
       if (!hasWorkData) {
@@ -102,7 +110,7 @@ export function ExportPdfButton({
 
       if (missing.length > 0) return
 
-      const url = await generateReportBlobUrl({ client, fullName, year, month, records, remarks: "" })
+      const url = await generateReportBlobUrl({ client, fullName, year, month, records, remarks })
       setBlobUrl(url)
       setPreviewOpen(true)
     } finally {
@@ -113,8 +121,8 @@ export function ExportPdfButton({
   const handleDownload = async () => {
     setDownloading(true)
     try {
-      const { records, fullName } = await fetchData()
-      await generateReport({ client, fullName, year, month, records, remarks: "" })
+      const { records, fullName, remarks } = await fetchData()
+      await generateReport({ client, fullName, year, month, records, remarks })
     } finally {
       setDownloading(false)
     }
