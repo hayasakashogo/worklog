@@ -6,7 +6,6 @@ export function ClockDisplay() {
   const [now, setNow] = useState<Date | null>(null)
 
   useEffect(() => {
-    setNow(new Date())
     const timer = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
@@ -36,7 +35,7 @@ export function ClockDisplay() {
   return (
     <div className="text-center py-8">
       <p className="text-sm font-medium text-muted-foreground tracking-wide mb-3">{dateStr}</p>
-      <p className="text-7xl sm:text-8xl font-bold tabular-nums tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+      <p className="text-7xl font-bold tabular-nums tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
         {timeStr}
       </p>
     </div>

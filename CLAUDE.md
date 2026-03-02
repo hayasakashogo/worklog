@@ -45,6 +45,10 @@ npm run test:watch   # テスト実行（ウォッチモード）
 - `/dashboard/[clientId]/records` → 当月にリダイレクト
 - `/dashboard/[clientId]/clients` — クライアント管理（Server Component）
 - `[clientId]/layout.tsx` で clientId の存在バリデーション（不正なら `notFound()`）。`clientId === "new"` は静的ルートが優先されるためこのレイアウトには到達しない
+- `app/(app)/dashboard/[clientId]/loading.tsx` — 打刻ページのスケルトン（ClockDisplay・PunchButtons カード）
+- `app/(app)/dashboard/[clientId]/records/[yearMonth]/loading.tsx` — 月次勤怠ページのスケルトン（CardHeader の PDF ボタン・月タイトル・stats・テーブル22行）
+- `app/(app)/dashboard/[clientId]/clients/loading.tsx` — クライアント管理ページのスケルトン（Card + テーブル3行）
+- スケルトンは Next.js App Router の `loading.tsx` 規約（Suspense boundary）を利用。`layout.tsx` のサイドバーはそのままで、コンテンツエリアのみスケルトンを表示する
 
 ### 状態管理
 - **URL ベース** — `clientId` と `yearMonth` を URL パラメータで管理。`ClientProvider` は廃止済み
@@ -73,13 +77,13 @@ npm run test:watch   # テスト実行（ウォッチモード）
 
 ### 主要コンポーネント
 - `components/auth/auth-form.tsx` — 認証フォーム共通ユーティリティ。`handleGoogleAuth()`（Google OAuth 開始）・`localizeError(message)`（Supabase エラーの日本語化）・`GoogleAuthButton`・`FormDivider` を提供。ログイン・サインアップページで共用
-- `components/layout/app-sidebar.tsx` — サイドバー。`clients`・`fullName: string`・`avatarUrl?: string` を props で受け取る。`avatarUrl` がある場合は Next.js `Image` で Google プロフィール画像を表示、ない場合は User アイコンにフォールバック。ヘッダーに Work-Log ロゴ（`/` へのリンク）・クライアントプルダウン（切り替え時は現在のページ種別を維持しつつ遷移: records ページは同じ yearMonth を保持、clients ページは clients ページへ、それ以外は打刻ページへ）・切り替え時に sonner トースト通知・ユーザーアバターと表示名インライン編集（鉛筆アイコン → 入力フィールド＋保存/キャンセルボタン、`profiles.full_name` を Supabase で更新）。ナビメニュー（打刻・勤怠一覧・クライアント管理）の下にログアウトボタンを配置。サイドバーフッターにプライバシーポリシー・利用規約・お問い合わせへのリンクを配置。`app/(app)/layout.tsx` が `profiles` から取得した `fullName` と `user.user_metadata.avatar_url` を渡す。`useSidebar` フックの `setOpenMobile()` をクライアント切り替え・ナビリンク・ログアウト時に呼び出しモバイルでサイドバーを自動クローズ
+- `components/layout/app-sidebar.tsx` — サイドバー。`clients`・`fullName: string`・`avatarUrl?: string` を props で受け取る。`avatarUrl` がある場合は Next.js `Image` で Google プロフィール画像を表示、ない場合は User アイコンにフォールバック。ヘッダーに Work-Log ロゴ（`/` へのリンク）・クライアントプルダウン（切り替え時は現在のページ種別を維持しつつ遷移: records ページは同じ yearMonth を保持、clients ページは clients ページへ、それ以外は打刻ページへ）・切り替え時に sonner トースト通知・ユーザーアバターと表示名インライン編集（鉛筆アイコン → 入力フィールド＋保存/キャンセルボタン、`profiles.full_name` を Supabase で更新）。ナビメニュー（打刻・勤怠一覧・クライアント管理）は `font-bold`、アクティブ項目の左側インジケーターバーは framer-motion の `layoutId="sidebar-active-indicator"` で項目間をスライドするスプリングアニメーション（`stiffness: 500, damping: 35`）、背景色・テキスト色は `data-[active=true]` で primary カラーに変化。`SidebarFooter` にログアウトボタン（上部）を配置し、ボーダーで区切った下部にプライバシーポリシー・利用規約・お問い合わせへのリンクを配置。`app/(app)/layout.tsx` が `profiles` から取得した `fullName` と `user.user_metadata.avatar_url` を渡す。`useSidebar` フックの `setOpenMobile()` をクライアント切り替え・ナビリンク・ログアウト時に呼び出しモバイルでサイドバーを自動クローズ
 - `components/layout/theme-toggle.tsx` — ダークモード切り替えボタン（Sun/Moon アイコン）。`app/(app)/layout.tsx` のヘッダー右端（`ml-auto`）に配置
 - `components/providers/theme-provider.tsx` — `next-themes` の `ThemeProvider` ラッパー。`app/layout.tsx` で使用
 - `components/layout/back-button.tsx` — 戻るボタンコンポーネント（Client Component）。`router.back()` を使用した ChevronLeft アイコン付きゴーストボタン。法律ページで使用
 - `components/layout/lp-header.tsx` — ランディングページ専用固定ヘッダー。ロゴ・サインアップ/ログインリンク・テーマトグルを配置。sticky 配置で背景ぼかし効果（backdrop-blur-xs）付き
 - `components/layout/lp-footer.tsx` — ランディングページフッター。プライバシーポリシー・利用規約・お問い合わせへのリンクを含む。`app/page.tsx` と `app/(legal)/layout.tsx` で使用
-- `components/dashboard/clock-display.tsx` — リアルタイムクロック表示（1秒ごとに更新）。ハイドレーション対策で初期値を `null` にしクライアントマウント後に時刻をセット。日付（年月日・曜日）と時刻（HH:MM:SS）を表示し、時刻はグラデーションテキスト（`bg-gradient-to-br from-foreground to-foreground/60`）で描画。時刻フォントサイズはレスポンシブ対応（`text-7xl sm:text-8xl`）
+- `components/dashboard/clock-display.tsx` — リアルタイムクロック表示（1秒ごとに更新）。ハイドレーション対策で初期値を `null` にし、`setInterval` の最初のコールバック（マウントから最大1秒後）で時刻をセット。日付（年月日・曜日）と時刻（HH:MM:SS）を表示し、時刻はグラデーションテキスト（`bg-gradient-to-br from-foreground to-foreground/60`）で描画。時刻フォントサイズは `text-7xl`（固定）
 - `components/dashboard/punch-buttons.tsx` — 出退勤ボタン。`client` と `initialRecord` を props で受け取り、Realtime でライブ更新。`is_off`（本日休み）チェックボックス・`note`（業務内容・備考）テキストエリア（onBlur 保存）を備える。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` 初期値に反映。ステータスに応じたカードのグラデーションバーと状態バッジ（出勤中はパルスアニメーション）を表示
 - `components/records/records-page-content.tsx` — 勤怠一覧ページの Client Component。`initialNote?` prop を受け取り `MonthlyTable` に転送。PDF出力時の勤怠漏れチェック結果（`highlightDates`）を状態管理し、漏れがある場合は警告バナーを表示。`ExportPdfButton` と警告バナーを `headerAction` prop 経由で `MonthlyTable` カードヘッダー内に注入する構成
 - `components/records/monthly-table.tsx` — 月次勤怠テーブル。`client`, `initialRecords`, `year`, `month`, `highlightDates?`, `initialNote?`, `headerAction?: React.ReactNode` を props で受け取り、月切り替えは `router.push` でURL遷移。`headerAction` が渡された場合は CardHeader 上部に描画（PDF ボタン・警告バナーの注入に使用）。列構成: 日・曜日（祝日名をサブテキストで表示）・休みチェックボックス・開始・終了・休憩・稼働時間・業務内容備考。セルはクリックで編集モードに入るインライン編集方式（`renderEditableCell`）で、`note` 列はクリックで `Textarea`、時刻・数値列は `Input` に切り替わる。開始・終了時刻は5分刻み（`step={300}`）、休憩は5分刻み数値入力。保存時に `floorTimeStringToFiveMinutes()` で時刻を5分単位に切り捨て。ヘッダーに合計稼働時間・標準工数範囲・推定稼働時間を表示。合計稼働時間の下に月次備考 `Textarea`（onBlur で `monthly_notes` に upsert）を表示。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` デフォルト値に反映。Realtime でタブ間同期。`highlightDates` に含まれる日付のセルは赤枠強調表示
@@ -89,10 +93,11 @@ npm run test:watch   # テスト実行（ウォッチモード）
 - `components/setup/setup-wizard.tsx` — 初回セットアップウィザード（Client Component）。2ステップ形式: Step1で氏名を `profiles` に保存、Step2でクライアント情報を `clients` に INSERT して `/dashboard/{id}` に遷移
 
 ### スタイリング
-- オレンジのプライマリカラーを CSS 変数 (oklch) で `app/globals.css` に定義
+- オレンジのプライマリカラーを CSS 変数（hex/rgba）で `app/globals.css` に定義
 - `next-themes` による class ストラテジーのダークモード
 - `lib/utils.ts` の `cn()` で条件付きクラス名を結合（clsx + tailwind-merge）
 - Tailwind CSS v4（PostCSS プラグイン、tailwind.config ファイルなし。テーマは globals.css にインライン定義）
+- アニメーション: `framer-motion` を使用。サイドバーナビの `layoutId` によるレイアウトアニメーションなど
 
 ### テスト
 - Jest + React Testing Library（`jest.config.ts`、`jest.setup.ts`）

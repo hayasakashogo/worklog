@@ -153,7 +153,7 @@ export function ExportPdfButton({
           )}
           <DialogFooter>
             <Button variant="outline" onClick={handleClose}>閉じる</Button>
-            <Button onClick={handleDownload} disabled={downloading}>
+            <Button onClick={handleDownload} disabled={downloading} className="font-bold">
               <Download className="mr-2 h-4 w-4" />
               {downloading ? "生成中..." : "ダウンロード"}
             </Button>
