@@ -21,12 +21,17 @@ npm run test:watch   # テスト実行（ウォッチモード）
 ### ルートグループ
 - `app/(auth)/` — ログイン・サインアップページ（パブリック）。認証方法は email + password と Google OAuth の2方式。サインアップ後の氏名収集は `/dashboard/new` で行う
   - `app/(auth)/layout.tsx` — 認証ページ共通レイアウト（Work-Log ロゴ・テーマトグル付きヘッダー＋中央揃えコンテンツ）
-  - `app/(auth)/signup/comp/page.tsx` — メール確認案内ページ（signup 成功後にリダイレクト）
+  - `app/(auth)/signup/comp/page.tsx` — メール確認案内ページ（signup 成功後にリダイレクト）。`mail.png` 画像付きビジュアルデザイン
 - `app/auth/callback/route.ts` — Google OAuth コールバックハンドラ。Supabase の `exchangeCodeForSession` でセッション確立後 `/dashboard` にリダイレクト
 - `app/(app)/` — 認証済みルート。サイドバーレイアウト付き
-- `app/page.tsx` — ランディングページ（パブリック、未認証でもアクセス可）
+- `app/(legal)/` — 法律情報ページ（パブリック）。LpHeader・LpFooter でラッピングした共通レイアウト
+  - `app/(legal)/privacy/page.tsx` — プライバシーポリシーページ（収集情報・利用目的・データ管理・第三者提供などを日本語で記載）
+  - `app/(legal)/terms/page.tsx` — 利用規約ページ（サービス概要・利用条件・禁止事項・免責事項などを日本語で記載）
+- `app/page.tsx` — ランディングページ（パブリック、未認証でもアクセス可）。LpHeader / LpFooter を使ったレイアウト。フィーチャーセクション（ワンクリック打刻・月次勤怠管理・PDF出力・複数クライアント対応）を2列グリッドで表示
+- `app/loading.tsx` — グローバルローディングスピナー（`min-h-screen` 中央揃え、`animate-spin` + `animate-pulse`）
+- `app/not-found.tsx` — グローバル404ページ。`notfound.png` 画像付きでトップページへのリンクを表示
 - `app/layout.tsx` — ルートレイアウト。`ThemeProvider`（next-themes）・`TooltipProvider`（shadcn/ui）・`Toaster`（sonner、`toastOptions.style` で `color-mix` を使ったプライマリカラーベースのスタイル）を配置
-- `proxy.ts` — Next.js 16 proxy。未認証ユーザーを `/login` にリダイレクト。`/auth/callback` はパブリックページとして許可
+- `proxy.ts` — Next.js 16 proxy。未認証ユーザーを `/login` にリダイレクト。パブリックページ（`/`・`/login`・`/signup`・`/auth/callback`・`/privacy`・`/terms`）は認証なしでアクセス可能
 
 ### 動的ルーティング（`app/(app)/dashboard/`）
 - `/dashboard` → クライアントがあれば最初の `/dashboard/[clientId]` に、なければ `/dashboard/new` にリダイレクト
@@ -46,7 +51,7 @@ npm run test:watch   # テスト実行（ウォッチモード）
 ### Supabase 連携
 - `lib/supabase/client.ts` — ブラウザクライアント (`createBrowserClient`)
 - `lib/supabase/server.ts` — サーバークライアント（Cookie 使用）
-- `lib/supabase/middleware.ts` — `proxy.ts` から呼ばれるセッション更新ヘルパー
+- `lib/supabase/middleware.ts` — `proxy.ts` から呼ばれるセッション更新・認証ルーティングヘルパー。未認証ユーザーをパブリックページ以外から `/login` にリダイレクト、認証済みユーザーが認証ページにアクセスした場合は `/dashboard` にリダイレクト
 - `time_records` テーブルで Supabase Realtime を有効化（タブ間のリアルタイム同期）
 
 ### データベース（4テーブル、すべて RLS `auth.uid() = user_id`）
@@ -64,14 +69,18 @@ npm run test:watch   # テスト実行（ウォッチモード）
 
 ### 主要コンポーネント
 - `components/auth/auth-form.tsx` — 認証フォーム共通ユーティリティ。`handleGoogleAuth()`（Google OAuth 開始）・`localizeError(message)`（Supabase エラーの日本語化）・`GoogleAuthButton`・`FormDivider` を提供。ログイン・サインアップページで共用
-- `components/layout/app-sidebar.tsx` — サイドバー。`clients`・`fullName: string`・`avatarUrl?: string` を props で受け取る。`avatarUrl` がある場合は Next.js `Image` で Google プロフィール画像を表示、ない場合は User アイコンにフォールバック。ヘッダーに Work-Log ロゴ（`/` へのリンク）・クライアントプルダウン（切り替え時は現在のページ種別を維持しつつ遷移: records ページは同じ yearMonth を保持、clients ページは clients ページへ、それ以外は打刻ページへ）・切り替え時に sonner トースト通知・ユーザーアバターと表示名インライン編集（鉛筆アイコン → 入力フィールド＋保存/キャンセルボタン、`profiles.full_name` を Supabase で更新）。ナビメニュー（打刻・勤怠一覧・クライアント管理）の下にログアウトボタンを配置。`app/(app)/layout.tsx` が `profiles` から取得した `fullName` と `user.user_metadata.avatar_url` を渡す
+- `components/layout/app-sidebar.tsx` — サイドバー。`clients`・`fullName: string`・`avatarUrl?: string` を props で受け取る。`avatarUrl` がある場合は Next.js `Image` で Google プロフィール画像を表示、ない場合は User アイコンにフォールバック。ヘッダーに Work-Log ロゴ（`/` へのリンク）・クライアントプルダウン（切り替え時は現在のページ種別を維持しつつ遷移: records ページは同じ yearMonth を保持、clients ページは clients ページへ、それ以外は打刻ページへ）・切り替え時に sonner トースト通知・ユーザーアバターと表示名インライン編集（鉛筆アイコン → 入力フィールド＋保存/キャンセルボタン、`profiles.full_name` を Supabase で更新）。ナビメニュー（打刻・勤怠一覧・クライアント管理）の下にログアウトボタンを配置。サイドバーフッターにプライバシーポリシー・利用規約へのリンクを配置。`app/(app)/layout.tsx` が `profiles` から取得した `fullName` と `user.user_metadata.avatar_url` を渡す。`useSidebar` フックの `setOpenMobile()` をクライアント切り替え・ナビリンク・ログアウト時に呼び出しモバイルでサイドバーを自動クローズ
 - `components/layout/theme-toggle.tsx` — ダークモード切り替えボタン（Sun/Moon アイコン）。`app/(app)/layout.tsx` のヘッダー右端（`ml-auto`）に配置
-- `components/dashboard/clock-display.tsx` — リアルタイムクロック表示（1秒ごとに更新）。ハイドレーション対策で初期値を `null` にしクライアントマウント後に時刻をセット。日付（年月日・曜日）と時刻（HH:MM:SS）を表示し、時刻はグラデーションテキスト（`bg-gradient-to-br from-foreground to-foreground/60`）で描画
+- `components/providers/theme-provider.tsx` — `next-themes` の `ThemeProvider` ラッパー。`app/layout.tsx` で使用
+- `components/layout/back-button.tsx` — 戻るボタンコンポーネント（Client Component）。`router.back()` を使用した ChevronLeft アイコン付きゴーストボタン。法律ページで使用
+- `components/layout/lp-header.tsx` — ランディングページ専用固定ヘッダー。ロゴ・サインアップ/ログインリンク・テーマトグルを配置。sticky 配置で背景ぼかし効果（backdrop-blur-xs）付き
+- `components/layout/lp-footer.tsx` — ランディングページフッター。プライバシーポリシー・利用規約へのリンクを含む。`app/page.tsx` と `app/(legal)/layout.tsx` で使用
+- `components/dashboard/clock-display.tsx` — リアルタイムクロック表示（1秒ごとに更新）。ハイドレーション対策で初期値を `null` にしクライアントマウント後に時刻をセット。日付（年月日・曜日）と時刻（HH:MM:SS）を表示し、時刻はグラデーションテキスト（`bg-gradient-to-br from-foreground to-foreground/60`）で描画。時刻フォントサイズはレスポンシブ対応（`text-7xl sm:text-8xl`）
 - `components/dashboard/punch-buttons.tsx` — 出退勤ボタン。`client` と `initialRecord` を props で受け取り、Realtime でライブ更新。`is_off`（本日休み）チェックボックス・`note`（業務内容・備考）テキストエリア（onBlur 保存）を備える。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` 初期値に反映。ステータスに応じたカードのグラデーションバーと状態バッジ（出勤中はパルスアニメーション）を表示
-- `components/records/records-page-content.tsx` — 勤怠一覧ページの Client Component。`initialNote?` prop を受け取り `MonthlyTable` に転送。PDF出力時の勤怠漏れチェック結果（`highlightDates`）を状態管理し、漏れがある場合は警告バナーを表示。`MonthlyTable` と `ExportPdfButton` を組み合わせる
-- `components/records/monthly-table.tsx` — 月次勤怠テーブル。`client`, `initialRecords`, `year`, `month`, `highlightDates?`, `initialNote?` を props で受け取り、月切り替えは `router.push` でURL遷移。列構成: 日・曜日（祝日名をサブテキストで表示）・休みチェックボックス・開始・終了・休憩・稼働時間・業務内容備考。セルはクリックで編集モードに入るインライン編集方式（`renderEditableCell`）で、`note` 列はクリックで `Textarea`、時刻・数値列は `Input` に切り替わる。開始・終了時刻は5分刻み（`step={300}`）、休憩は5分刻み数値入力。保存時に `floorTimeStringToFiveMinutes()` で時刻を5分単位に切り捨て。ヘッダーに合計稼働時間・標準工数範囲・推定稼働時間を表示。合計稼働時間の下に月次備考 `Textarea`（onBlur で `monthly_notes` に upsert）を表示。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` デフォルト値に反映。Realtime でタブ間同期。`highlightDates` に含まれる日付のセルは赤枠強調表示
+- `components/records/records-page-content.tsx` — 勤怠一覧ページの Client Component。`initialNote?` prop を受け取り `MonthlyTable` に転送。PDF出力時の勤怠漏れチェック結果（`highlightDates`）を状態管理し、漏れがある場合は警告バナーを表示。`ExportPdfButton` と警告バナーを `headerAction` prop 経由で `MonthlyTable` カードヘッダー内に注入する構成
+- `components/records/monthly-table.tsx` — 月次勤怠テーブル。`client`, `initialRecords`, `year`, `month`, `highlightDates?`, `initialNote?`, `headerAction?: React.ReactNode` を props で受け取り、月切り替えは `router.push` でURL遷移。`headerAction` が渡された場合は CardHeader 上部に描画（PDF ボタン・警告バナーの注入に使用）。列構成: 日・曜日（祝日名をサブテキストで表示）・休みチェックボックス・開始・終了・休憩・稼働時間・業務内容備考。セルはクリックで編集モードに入るインライン編集方式（`renderEditableCell`）で、`note` 列はクリックで `Textarea`、時刻・数値列は `Input` に切り替わる。開始・終了時刻は5分刻み（`step={300}`）、休憩は5分刻み数値入力。保存時に `floorTimeStringToFiveMinutes()` で時刻を5分単位に切り捨て。ヘッダーに合計稼働時間・標準工数範囲・推定稼働時間を表示。合計稼働時間の下に月次備考 `Textarea`（onBlur で `monthly_notes` に upsert）を表示。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` デフォルト値に反映。Realtime でタブ間同期。`highlightDates` に含まれる日付のセルは赤枠強調表示
 - `components/records/export-pdf-button.tsx` — PDF出力ボタン。`client`, `year`, `month`, `onMissingCheck` を props で受け取る。クリック時にまず稼働データ有無を確認（なければ sonner でエラートースト「この月には稼働データがありません」を表示して終了）。次に勤怠漏れチェック（`computeMissingDates`）を実行し（過去・今日・未来日を問わず非休日の勤務日でレコードがない or 未入力を漏れとみなす）、漏れがあれば `onMissingCheck` コールバックに日付リストを渡して終了。漏れがなければ `fetchData()` 内で `monthly_notes` も取得し `remarks` として `generateReportBlobUrl` に渡して PDF を生成、プレビューダイアログ（`<Dialog>` + `<iframe>`）を開く。ダイアログ内のダウンロードボタンで `generateReport` を呼び出してファイル保存する
-- `components/clients/clients-page-content.tsx` — クライアント管理画面の Client Component。`clients` と `currentClientId` を props で受け取る。Table レイアウトで一覧表示し、各行にラジオボタン（アクティブクライアント切り替え）・クライアント名・標準工数（min〜max h）・定時（開始〜終了）・休憩分・休み設定（曜日＋祝日）・編集ボタン・削除ボタンを表示。ラジオボタン変更時は `router.push` でクライアント切り替えと `sonner` トースト通知。削除時は confirm ダイアログ表示後 Supabase で削除し、削除対象が現在のクライアントなら `/dashboard` にリダイレクト
+- `components/clients/clients-page-content.tsx` — クライアント管理画面の Client Component。`clients` と `currentClientId` を props で受け取る。Table レイアウトで一覧表示し、各行にカスタム円形ボタン（アクティブクライアント切り替え、`rounded-full border-2 border-primary` スタイルで内側ドットで選択状態を表現）・クライアント名・標準工数（min〜max h）・定時（開始〜終了）・休憩分・休み設定（曜日＋祝日）・編集ボタン・削除ボタンを表示。ボタン押下時は `router.push` でクライアント切り替えと `sonner` トースト通知。削除時は confirm ダイアログ表示後 Supabase で削除し、削除対象が現在のクライアントなら `/dashboard` にリダイレクト
 - `components/clients/client-form-dialog.tsx` — クライアント追加・編集フォームダイアログ（`clients-page-content` から利用）
 - `components/setup/setup-wizard.tsx` — 初回セットアップウィザード（Client Component）。2ステップ形式: Step1で氏名を `profiles` に保存、Step2でクライアント情報を `clients` に INSERT して `/dashboard/{id}` に遷移
 

@@ -24,6 +24,12 @@ const features = [
     description: "クライアントへの月次報告書をPDFで即座に出力。ファイル名も自動生成。",
     checks: ["入力漏れを事前にチェック", "備考欄付きPDF生成", "ファイル名テンプレートに対応"],
   },
+  {
+    image: "/lp/clients.png",
+    title: "複数クライアントに対応",
+    description: "複数の取引先を登録して切り替えるだけ。クライアントごとに稼働設定を個別管理できます。",
+    checks: ["複数クライアントを一括管理", "クライアントごとに稼働設定", "切り替えはワンクリック"],
+  },
 ]
 
 const steps = [
@@ -81,7 +87,7 @@ export default function Home() {
               {/* 左: テキストコンテンツ */}
               <div>
                 {/* フィーチャータグ */}
-                <div className="mb-6 flex flex-wrap gap-2">
+                <div className="mb-6 flex flex-wrap gap-2 justify-center">
                   {["ワンクリック打刻", "月次勤怠管理", "稼働報告書PDF出力"].map((tag) => (
                     <span
                       key={tag}
@@ -92,7 +98,7 @@ export default function Home() {
                   ))}
                 </div>
 
-                <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                <h1 className="text-3xl font-bold tracking-tight sm:text-4xl text-center">
                   フリーランスの稼働管理を、
                   <span className="block bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                     もっとシンプルに。
@@ -100,7 +106,7 @@ export default function Home() {
                 </h1>
 
                 <p className="mt-5 max-w-lg text-muted-foreground">
-                  Work-Log は準委任契約のフリーランス向け稼働記録ツールです。
+                  Work-Log は準委任契約のフリーランス向け稼働記録ツールです。<br />
                   日々の勤怠入力から月次の稼働報告書PDF出力まで、これひとつで完結します。
                 </p>
 
@@ -140,9 +146,9 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 max-w-3xl mx-auto">
               {features.map((f) => (
-                <div key={f.title} className="rounded-xl border bg-card p-6 shadow-sm flex flex-col">
+                <div key={f.title} className="rounded-xl border bg-card p-6 shadow-sm flex flex-col items-center text-center">
                   <div className="mb-5 flex justify-center">
                     <div className="rounded-xl bg-primary/10 p-4">
                       <Image src={f.image} alt={f.title} width={140} height={110} className="object-contain" />
@@ -165,16 +171,16 @@ export default function Home() {
         </section>
 
         {/* How It Works */}
-        <section id="how" className="px-4 sm:px-12 py-24">
-          <div className="container mx-auto max-w-6xl">
-            <div className="mb-12 text-center">
+        <section id="how" className="px-4 sm:px-12 py-16">
+          <div className="container mx-auto max-w-4xl">
+            <div className="mb-10 text-center">
               <h2 className="text-3xl font-bold tracking-tight">3ステップで始められます</h2>
               <p className="mt-3 text-muted-foreground">
                 登録から初回の稼働報告書出力まで、最短で当日中に完了します。
               </p>
             </div>
 
-            <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-5">
+            <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
               {steps.flatMap((step, i) => [
                 <div
                   key={step.num}
@@ -189,7 +195,7 @@ export default function Home() {
                 </div>,
                 i < steps.length - 1 ? (
                   <div key={`arrow-${i}`} className="hidden justify-center sm:flex sm:col-span-1">
-                    <ChevronRight className="h-8 w-8 text-muted-foreground/40" />
+                    <ChevronRight className="h-8 w-8 text-primary" />
                   </div>
                 ) : null,
               ])}

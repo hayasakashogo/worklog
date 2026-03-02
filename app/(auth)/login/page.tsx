@@ -75,14 +75,14 @@ export default function LoginPage() {
           {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
         </div>
         {serverError && <p className="text-sm text-destructive">{serverError}</p>}
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" className="w-full font-bold" disabled={isSubmitting}>
           {isSubmitting ? "ログイン中..." : "ログイン"}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
         アカウントをお持ちでない方は{" "}
-        <Link href="/signup" className="text-primary underline underline-offset-4">
+        <Link href="/signup" className="text-primary underline underline-offset-4 font-bold">
           アカウント作成
         </Link>
       </p>

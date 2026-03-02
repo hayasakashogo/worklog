@@ -81,14 +81,14 @@ export default function SignupPage() {
           {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
         </div>
         {serverError && <p className="text-sm text-destructive">{serverError}</p>}
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" className="w-full font-bold" disabled={isSubmitting}>
           {isSubmitting ? "作成中..." : "アカウント作成"}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
         すでにアカウントをお持ちの方は{" "}
-        <Link href="/login" className="text-primary underline underline-offset-4">
+        <Link href="/login" className="text-primary underline underline-offset-4 font-bold">
           ログイン
         </Link>
       </p>

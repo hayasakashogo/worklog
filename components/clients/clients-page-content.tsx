@@ -66,16 +66,17 @@ export function ClientsPageContent({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">クライアント管理</h1>
-        <Button onClick={handleAdd}>
-          <Plus className="mr-2 h-4 w-4" />
-          追加
-        </Button>
-      </div>
-
       {clients.length === 0 ? (
         <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>クライアント一覧</CardTitle>
+              <Button onClick={handleAdd} className="font-bold">
+                <Plus className="mr-2 h-4 w-4" />
+                追加
+              </Button>
+            </div>
+          </CardHeader>
           <CardContent className="py-10 text-center text-muted-foreground">
             クライアントが登録されていません。「追加」ボタンから登録してください。
           </CardContent>
@@ -83,7 +84,13 @@ export function ClientsPageContent({
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>クライアント一覧</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>クライアント一覧</CardTitle>
+              <Button onClick={handleAdd} className="font-bold">
+                <Plus className="mr-2 h-4 w-4" />
+                追加
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -102,16 +109,17 @@ export function ClientsPageContent({
                 {clients.map((client) => (
                   <TableRow key={client.id} className={client.id === currentClientId ? "bg-primary/10" : ""}>
                     <TableCell>
-                      <input
-                        type="radio"
-                        name="active-client"
-                        checked={client.id === currentClientId}
-                        onChange={() => {
+                      <button
+                        onClick={() => {
                           router.push(`/dashboard/${client.id}/clients`)
                           toast.success(`「${client.name}」に切り替えました`)
                         }}
-                        className="accent-primary cursor-pointer"
-                      />
+                        className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-primary cursor-pointer transition-colors hover:bg-primary/10"
+                      >
+                        {client.id === currentClientId && (
+                          <span className="h-2.5 w-2.5 rounded-full bg-primary block" />
+                        )}
+                      </button>
                     </TableCell>
                     <TableCell className="font-medium">{client.name}</TableCell>
                     <TableCell>
