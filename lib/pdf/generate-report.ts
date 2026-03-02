@@ -95,7 +95,7 @@ async function buildReport(params: ReportParams): Promise<jsPDF> {
       ],
     ],
     styles: { font: "NotoSansJP", fontSize: 9 },
-    headStyles: { font: "NotoSansJP", fontStyle: "normal", fillColor: [234, 120, 40] },
+    headStyles: { font: "NotoSansJP", fontStyle: "normal", fillColor: [80, 80, 80] },
     margin: { left: marginLeft, right: marginLeft },
   })
 
@@ -111,7 +111,7 @@ async function buildReport(params: ReportParams): Promise<jsPDF> {
   const innerPadding = 3
   const lineHeight = 5
 
-  let remarksLines: string[] = []
+  const remarksLines: string[] = []
   if (remarks) {
     const maxWidth = boxWidth - innerPadding * 2
     remarks.split("\n").forEach((line) => {
@@ -166,8 +166,9 @@ async function buildReport(params: ReportParams): Promise<jsPDF> {
     startY: y,
     head: [["日付", "曜日", "開始", "終了", "休憩", "稼働時間", "業務内容・備考"]],
     body: tableBody,
-    styles: { font: "NotoSansJP", fontSize: 8, cellPadding: 1.5 },
-    headStyles: { font: "NotoSansJP", fontStyle: "normal", fillColor: [234, 120, 40] },
+    styles: { font: "NotoSansJP", fontSize: 8, cellPadding: 1.5, fillColor: [255, 255, 255], lineWidth: 0.1, lineColor: [210, 210, 210] },
+    alternateRowStyles: { fillColor: [255, 255, 255] },
+    headStyles: { font: "NotoSansJP", fontStyle: "normal", fillColor: [80, 80, 80] },
     columnStyles: {
       0: { cellWidth: 18 },
       1: { cellWidth: 14 },

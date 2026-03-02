@@ -65,7 +65,10 @@ export function ClientFormDialog({
 
   useEffect(() => {
     if (open) {
-      setForm(editingClient ?? DEFAULT_CLIENT)
+      const timeout = setTimeout(() => {
+        setForm(editingClient ?? DEFAULT_CLIENT)
+      }, 0)
+      return () => clearTimeout(timeout)
     }
   }, [open, editingClient])
 

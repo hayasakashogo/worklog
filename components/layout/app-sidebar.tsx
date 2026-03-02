@@ -1,12 +1,14 @@
 "use client"
 
 import { Clock, CalendarDays, Building2, LogOut, Pencil, User } from "lucide-react"
+import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
+import { cn } from "@/lib/utils"
 import type { Client } from "@/types/client"
 import {
   Sidebar,
@@ -49,7 +51,7 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
 
   const menuItems = [
     { title: "打刻", href: `/dashboard/${currentClientId}`, icon: Clock, exact: true },
-    { title: "勤怠一覧", href: `/dashboard/${currentClientId}/records/${currentYearMonth}`, icon: CalendarDays, exact: false },
+    { title: "勤怠一覧", href: `/dashboard/${currentClientId}/records`, icon: CalendarDays, exact: false },
     { title: "クライアント管理", href: `/dashboard/${currentClientId}/clients`, icon: Building2, exact: false },
   ]
 
@@ -153,30 +155,49 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={item.exact ? pathname === item.href : pathname.startsWith(item.href)}>
-                    <Link href={item.href} onClick={() => setOpenMobile(false)}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {/* ログアウト（ナビリンクの直下に詰める） */}
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => { setOpenMobile(false); handleLogout() }}>
-                  <LogOut />
-                  <span>ログアウト</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+            <SidebarMenu className="gap-2">
+              {menuItems.map((item) => {
+                const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    {isActive && (
+                      <motion.span
+                        layoutId="sidebar-active-indicator"
+                        className="absolute left-0 top-1 bottom-1 w-0.75 rounded-full bg-primary"
+                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                      />
+                    )}
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className={cn(
+                        "font-bold transition-colors duration-200",
+                        "data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:font-bold",
+                        "[&[data-active=true]_svg]:text-primary [&[data-active=true]_svg]:scale-110 [&_svg]:transition-[color,transform] [&_svg]:duration-200",
+                      )}
+                    >
+                      <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="px-4 py-3 border-t">
-        <div className="flex flex-col gap-1 text-xs">
+      <SidebarFooter className="p-0">
+        <SidebarMenu className="px-2 py-2">
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={() => { setOpenMobile(false); handleLogout() }}>
+              <LogOut />
+              <span>ログアウト</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <div className="flex flex-col gap-1 text-xs px-4 py-3 border-t">
           <Link href="/privacy" className="text-primary hover:underline">プライバシーポリシー</Link>
           <Link href="/terms" className="text-primary hover:underline">利用規約</Link>
           <Link href="/contact" className="text-primary hover:underline">お問い合わせ</Link>

@@ -342,17 +342,17 @@ export function MonthlyTable({
             rows={3}
           />
           <div className="overflow-x-auto border border-border/40 rounded-md">
-            <Table className="[&_th]:border-r [&_th:last-child]:border-r-0 [&_th]:border-border/30 [&_td]:border-r [&_td:last-child]:border-r-0 [&_td]:border-border/30">
+            <Table className="[&_th]:border-r [&_th:last-child]:border-r-0 [&_th]:border-border/30 [&_td]:border-r [&_td:last-child]:border-r-0 [&_td]:border-border/30 [&_th]:font-bold">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-px whitespace-nowrap text-center">日</TableHead>
-                  <TableHead className="w-px whitespace-nowrap text-center">曜</TableHead>
-                  <TableHead className="w-px whitespace-nowrap text-center">休み</TableHead>
-                  <TableHead className="w-px whitespace-nowrap text-center">開始</TableHead>
-                  <TableHead className="w-px whitespace-nowrap text-center">終了</TableHead>
-                  <TableHead className="w-px whitespace-nowrap text-center">休憩</TableHead>
-                  <TableHead className="w-px whitespace-nowrap text-center">稼働</TableHead>
-                  <TableHead className="text-center">業務内容・備考</TableHead>
+                  <TableHead className="w-[1%] whitespace-nowrap text-center">日</TableHead>
+                  <TableHead className="w-[1%] whitespace-nowrap text-center">曜</TableHead>
+                  <TableHead className="w-[1%] whitespace-nowrap text-center">休み</TableHead>
+                  <TableHead className="w-[1%] whitespace-nowrap text-center">開始</TableHead>
+                  <TableHead className="w-[1%] whitespace-nowrap text-center">終了</TableHead>
+                  <TableHead className="w-[1%] whitespace-nowrap text-center">休憩</TableHead>
+                  <TableHead className="w-[1%] whitespace-nowrap text-center">稼働</TableHead>
+                  <TableHead className="min-w-56 sm:min-w-40 text-center">業務内容・備考</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
