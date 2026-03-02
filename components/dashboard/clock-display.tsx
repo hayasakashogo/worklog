@@ -15,7 +15,7 @@ export function ClockDisplay() {
     return (
       <div className="text-center py-8">
         <p className="text-sm text-muted-foreground mb-3">&nbsp;</p>
-        <p className="text-8xl font-bold tabular-nums tracking-tight text-transparent">&nbsp;</p>
+        <p className="text-5xl sm:text-8xl font-bold tabular-nums tracking-tight text-transparent">&nbsp;</p>
       </div>
     )
   }
@@ -36,7 +36,7 @@ export function ClockDisplay() {
   return (
     <div className="text-center py-8">
       <p className="text-sm font-medium text-muted-foreground tracking-wide mb-3">{dateStr}</p>
-      <p className="text-8xl font-bold tabular-nums tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+      <p className="text-7xl sm:text-8xl font-bold tabular-nums tracking-tight bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
         {timeStr}
       </p>
     </div>

@@ -10,6 +10,10 @@ export function LpFooter() {
         <p className="text-xs text-muted-foreground">
           準委任契約フリーランス向け稼働記録ツール &nbsp;·&nbsp; &copy; 2026 Work-Log
         </p>
+        <div className="flex gap-4 text-xs">
+          <Link href="/privacy" className="text-primary hover:underline">プライバシーポリシー</Link>
+          <Link href="/terms" className="text-primary hover:underline">利用規約</Link>
+        </div>
       </div>
     </footer>
   )

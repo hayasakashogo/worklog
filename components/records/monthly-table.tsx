@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -45,6 +45,7 @@ export function MonthlyTable({
   month,
   highlightDates,
   initialNote,
+  headerAction,
 }: {
   client: Client
   initialRecords: TimeRecord[]
@@ -52,6 +53,7 @@ export function MonthlyTable({
   month: number
   highlightDates?: Set<string>
   initialNote?: string
+  headerAction?: React.ReactNode
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -302,15 +304,16 @@ export function MonthlyTable({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <Button variant="ghost" size="icon" onClick={prevMonth}>
-              <ChevronLeft className="h-5 w-5" />
+          {headerAction && headerAction}
+          <div className="flex items-center justify-center gap-10">
+            <Button variant="ghost" className="h-10 w-10" onClick={prevMonth}>
+              <ChevronLeft className="size-7 text-primary" />
             </Button>
             <CardTitle>
               {year}年{month}月
             </CardTitle>
-            <Button variant="ghost" size="icon" onClick={nextMonth}>
-              <ChevronRight className="h-5 w-5" />
+            <Button variant="ghost" className="h-10 w-10" onClick={nextMonth}>
+              <ChevronRight className="size-7 text-primary" />
             </Button>
           </div>
         </CardHeader>

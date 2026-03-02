@@ -44,35 +44,34 @@ export function RecordsPageContent({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">勤怠一覧</h1>
-        <ExportPdfButton
-          client={client}
-          year={year}
-          month={month}
-          onMissingCheck={handleMissingCheck}
-        />
-      </div>
-
-      {missingDisplay.length > 0 && (
-        <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <div>
-            <p className="font-medium">勤怠漏れがあります</p>
-            <p className="text-xs mt-0.5">{missingDisplay.join("、")}</p>
+    <MonthlyTable
+      client={client}
+      initialRecords={initialRecords}
+      year={year}
+      month={month}
+      highlightDates={highlightDates}
+      initialNote={initialNote}
+      headerAction={
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <ExportPdfButton
+              client={client}
+              year={year}
+              month={month}
+              onMissingCheck={handleMissingCheck}
+            />
           </div>
+          {missingDisplay.length > 0 && (
+            <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-medium">勤怠漏れがあります</p>
+                <p className="text-xs mt-0.5">{missingDisplay.join("、")}</p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-
-      <MonthlyTable
-        client={client}
-        initialRecords={initialRecords}
-        year={year}
-        month={month}
-        highlightDates={highlightDates}
-        initialNote={initialNote}
-      />
-    </div>
+      }
+    />
   )
 }

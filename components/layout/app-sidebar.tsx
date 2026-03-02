@@ -18,6 +18,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
   Select,
@@ -34,6 +35,7 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
   const router = useRouter()
   const supabase = createClient()
 
+  const { setOpenMobile } = useSidebar()
   const [isEditing, setIsEditing] = useState(false)
   const [nameValue, setNameValue] = useState(fullName)
   const [nameSaving, setNameSaving] = useState(false)
@@ -52,6 +54,7 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
   ]
 
   const handleClientChange = (newId: string) => {
+    setOpenMobile(false)
     const newClient = clients.find((c) => c.id === newId)
     if (newClient) {
       toast.success(`「${newClient.name}」に切り替えました`)
@@ -92,7 +95,7 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
     <Sidebar>
       <SidebarHeader className="p-4 space-y-3">
         {/* ロゴ */}
-        <Link href="/" className="text-lg font-bold text-primary block">
+        <Link href="/" className="text-lg font-bold text-primary block text-center">
           Work-Log
         </Link>
         {/* クライアントプルダウン */}
@@ -154,7 +157,7 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={item.exact ? pathname === item.href : pathname.startsWith(item.href)}>
-                    <Link href={item.href}>
+                    <Link href={item.href} onClick={() => setOpenMobile(false)}>
                       <item.icon />
                       <span>{item.title}</span>
                     </Link>
@@ -163,7 +166,7 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
               ))}
               {/* ログアウト（ナビリンクの直下に詰める） */}
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleLogout}>
+                <SidebarMenuButton onClick={() => { setOpenMobile(false); handleLogout() }}>
                   <LogOut />
                   <span>ログアウト</span>
                 </SidebarMenuButton>
@@ -172,7 +175,12 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter />
+      <SidebarFooter className="px-4 py-3 border-t">
+        <div className="flex flex-col gap-1 text-xs">
+          <Link href="/privacy" className="text-primary hover:underline">プライバシーポリシー</Link>
+          <Link href="/terms" className="text-primary hover:underline">利用規約</Link>
+        </div>
+      </SidebarFooter>
     </Sidebar>
   )
 }

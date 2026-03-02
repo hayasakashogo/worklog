@@ -138,7 +138,7 @@ export function ExportPdfButton({
 
   return (
     <>
-      <Button variant="outline" onClick={handleClick} disabled={generating}>
+      <Button variant="default" onClick={handleClick} disabled={generating} className="font-bold">
         <Download className="mr-2 h-4 w-4" />
         {generating ? "確認中..." : "PDF出力"}
       </Button>
