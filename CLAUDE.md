@@ -27,11 +27,15 @@ npm run test:watch   # テスト実行（ウォッチモード）
 - `app/(legal)/` — 法律情報ページ（パブリック）。LpHeader・LpFooter でラッピングした共通レイアウト
   - `app/(legal)/privacy/page.tsx` — プライバシーポリシーページ（収集情報・利用目的・データ管理・第三者提供などを日本語で記載）
   - `app/(legal)/terms/page.tsx` — 利用規約ページ（サービス概要・利用条件・禁止事項・免責事項などを日本語で記載）
+  - `app/(legal)/contact/page.tsx` — お問い合わせページ。react-hook-form + zod によるバリデーション付きフォーム（お名前・メールアドレス・お問い合わせ内容）。送信前に確認ダイアログを表示する2段階送信フロー。送信成功時は CheckCircle アイコン付きの完了メッセージをインライン表示（トーストなし）。API は `/api/contact` に POST し Slack Webhook で通知
 - `app/page.tsx` — ランディングページ（パブリック、未認証でもアクセス可）。LpHeader / LpFooter を使ったレイアウト。フィーチャーセクション（ワンクリック打刻・月次勤怠管理・PDF出力・複数クライアント対応）を2列グリッドで表示
 - `app/loading.tsx` — グローバルローディングスピナー（`min-h-screen` 中央揃え、`animate-spin` + `animate-pulse`）
 - `app/not-found.tsx` — グローバル404ページ。`notfound.png` 画像付きでトップページへのリンクを表示
 - `app/layout.tsx` — ルートレイアウト。`ThemeProvider`（next-themes）・`TooltipProvider`（shadcn/ui）・`Toaster`（sonner、`toastOptions.style` で `color-mix` を使ったプライマリカラーベースのスタイル）を配置
-- `proxy.ts` — Next.js 16 proxy。未認証ユーザーを `/login` にリダイレクト。パブリックページ（`/`・`/login`・`/signup`・`/auth/callback`・`/privacy`・`/terms`）は認証なしでアクセス可能
+- `proxy.ts` — Next.js 16 proxy。未認証ユーザーを `/login` にリダイレクト。パブリックページ（`/`・`/login`・`/signup`・`/auth/callback`・`/privacy`・`/terms`・`/contact`）は認証なしでアクセス可能
+
+### API エンドポイント
+- `app/api/contact/route.ts` — お問い合わせ API（パブリック）。POST で `{ name, email, message }` を受け取り、`SLACK_WEBHOOK_URL` 環境変数に設定された Slack Webhook URL へ通知を送信
 
 ### 動的ルーティング（`app/(app)/dashboard/`）
 - `/dashboard` → クライアントがあれば最初の `/dashboard/[clientId]` に、なければ `/dashboard/new` にリダイレクト
@@ -69,12 +73,12 @@ npm run test:watch   # テスト実行（ウォッチモード）
 
 ### 主要コンポーネント
 - `components/auth/auth-form.tsx` — 認証フォーム共通ユーティリティ。`handleGoogleAuth()`（Google OAuth 開始）・`localizeError(message)`（Supabase エラーの日本語化）・`GoogleAuthButton`・`FormDivider` を提供。ログイン・サインアップページで共用
-- `components/layout/app-sidebar.tsx` — サイドバー。`clients`・`fullName: string`・`avatarUrl?: string` を props で受け取る。`avatarUrl` がある場合は Next.js `Image` で Google プロフィール画像を表示、ない場合は User アイコンにフォールバック。ヘッダーに Work-Log ロゴ（`/` へのリンク）・クライアントプルダウン（切り替え時は現在のページ種別を維持しつつ遷移: records ページは同じ yearMonth を保持、clients ページは clients ページへ、それ以外は打刻ページへ）・切り替え時に sonner トースト通知・ユーザーアバターと表示名インライン編集（鉛筆アイコン → 入力フィールド＋保存/キャンセルボタン、`profiles.full_name` を Supabase で更新）。ナビメニュー（打刻・勤怠一覧・クライアント管理）の下にログアウトボタンを配置。サイドバーフッターにプライバシーポリシー・利用規約へのリンクを配置。`app/(app)/layout.tsx` が `profiles` から取得した `fullName` と `user.user_metadata.avatar_url` を渡す。`useSidebar` フックの `setOpenMobile()` をクライアント切り替え・ナビリンク・ログアウト時に呼び出しモバイルでサイドバーを自動クローズ
+- `components/layout/app-sidebar.tsx` — サイドバー。`clients`・`fullName: string`・`avatarUrl?: string` を props で受け取る。`avatarUrl` がある場合は Next.js `Image` で Google プロフィール画像を表示、ない場合は User アイコンにフォールバック。ヘッダーに Work-Log ロゴ（`/` へのリンク）・クライアントプルダウン（切り替え時は現在のページ種別を維持しつつ遷移: records ページは同じ yearMonth を保持、clients ページは clients ページへ、それ以外は打刻ページへ）・切り替え時に sonner トースト通知・ユーザーアバターと表示名インライン編集（鉛筆アイコン → 入力フィールド＋保存/キャンセルボタン、`profiles.full_name` を Supabase で更新）。ナビメニュー（打刻・勤怠一覧・クライアント管理）の下にログアウトボタンを配置。サイドバーフッターにプライバシーポリシー・利用規約・お問い合わせへのリンクを配置。`app/(app)/layout.tsx` が `profiles` から取得した `fullName` と `user.user_metadata.avatar_url` を渡す。`useSidebar` フックの `setOpenMobile()` をクライアント切り替え・ナビリンク・ログアウト時に呼び出しモバイルでサイドバーを自動クローズ
 - `components/layout/theme-toggle.tsx` — ダークモード切り替えボタン（Sun/Moon アイコン）。`app/(app)/layout.tsx` のヘッダー右端（`ml-auto`）に配置
 - `components/providers/theme-provider.tsx` — `next-themes` の `ThemeProvider` ラッパー。`app/layout.tsx` で使用
 - `components/layout/back-button.tsx` — 戻るボタンコンポーネント（Client Component）。`router.back()` を使用した ChevronLeft アイコン付きゴーストボタン。法律ページで使用
 - `components/layout/lp-header.tsx` — ランディングページ専用固定ヘッダー。ロゴ・サインアップ/ログインリンク・テーマトグルを配置。sticky 配置で背景ぼかし効果（backdrop-blur-xs）付き
-- `components/layout/lp-footer.tsx` — ランディングページフッター。プライバシーポリシー・利用規約へのリンクを含む。`app/page.tsx` と `app/(legal)/layout.tsx` で使用
+- `components/layout/lp-footer.tsx` — ランディングページフッター。プライバシーポリシー・利用規約・お問い合わせへのリンクを含む。`app/page.tsx` と `app/(legal)/layout.tsx` で使用
 - `components/dashboard/clock-display.tsx` — リアルタイムクロック表示（1秒ごとに更新）。ハイドレーション対策で初期値を `null` にしクライアントマウント後に時刻をセット。日付（年月日・曜日）と時刻（HH:MM:SS）を表示し、時刻はグラデーションテキスト（`bg-gradient-to-br from-foreground to-foreground/60`）で描画。時刻フォントサイズはレスポンシブ対応（`text-7xl sm:text-8xl`）
 - `components/dashboard/punch-buttons.tsx` — 出退勤ボタン。`client` と `initialRecord` を props で受け取り、Realtime でライブ更新。`is_off`（本日休み）チェックボックス・`note`（業務内容・備考）テキストエリア（onBlur 保存）を備える。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` 初期値に反映。ステータスに応じたカードのグラデーションバーと状態バッジ（出勤中はパルスアニメーション）を表示
 - `components/records/records-page-content.tsx` — 勤怠一覧ページの Client Component。`initialNote?` prop を受け取り `MonthlyTable` に転送。PDF出力時の勤怠漏れチェック結果（`highlightDates`）を状態管理し、漏れがある場合は警告バナーを表示。`ExportPdfButton` と警告バナーを `headerAction` prop 経由で `MonthlyTable` カードヘッダー内に注入する構成
@@ -101,6 +105,7 @@ npm run test:watch   # テスト実行（ウォッチモード）
 ```
 NEXT_PUBLIC_SUPABASE_URL=<project-url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SLACK_WEBHOOK_URL=<slack-incoming-webhook-url>
 ```
 
 ## コーディング規約
