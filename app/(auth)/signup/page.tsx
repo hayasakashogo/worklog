@@ -81,9 +81,11 @@ export default function SignupPage() {
           {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
         </div>
         {serverError && <p className="text-sm text-destructive">{serverError}</p>}
-        <Button type="submit" className="w-full font-bold" disabled={isSubmitting}>
-          {isSubmitting ? "作成中..." : "アカウント作成"}
-        </Button>
+        <div className="flex justify-center">
+          <Button type="submit" className="font-bold" disabled={isSubmitting}>
+            {isSubmitting ? "作成中..." : "アカウント作成"}
+          </Button>
+        </div>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">

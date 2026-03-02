@@ -179,6 +179,7 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
         <div className="flex flex-col gap-1 text-xs">
           <Link href="/privacy" className="text-primary hover:underline">プライバシーポリシー</Link>
           <Link href="/terms" className="text-primary hover:underline">利用規約</Link>
+          <Link href="/contact" className="text-primary hover:underline">お問い合わせ</Link>
         </div>
       </SidebarFooter>
     </Sidebar>

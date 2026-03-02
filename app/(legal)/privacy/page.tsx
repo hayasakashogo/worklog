@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { BackButton } from "@/components/layout/back-button"
 
 export default function PrivacyPage() {
@@ -56,7 +57,9 @@ export default function PrivacyPage() {
       <section className="mb-8">
         <h2 className="text-lg font-semibold mb-3">6. お問い合わせ</h2>
         <p className="text-muted-foreground leading-relaxed">
-          プライバシーポリシーに関するご質問は、サービス内のお問い合わせ窓口よりご連絡ください。
+          プライバシーポリシーに関するご質問は、
+          <Link href="/contact" className="text-primary underline underline-offset-4">お問い合わせページ</Link>
+          よりご連絡ください。
         </p>
       </section>
 

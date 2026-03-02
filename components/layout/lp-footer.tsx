@@ -13,6 +13,7 @@ export function LpFooter() {
         <div className="flex gap-4 text-xs">
           <Link href="/privacy" className="text-primary hover:underline">プライバシーポリシー</Link>
           <Link href="/terms" className="text-primary hover:underline">利用規約</Link>
+          <Link href="/contact" className="text-primary hover:underline">お問い合わせ</Link>
         </div>
       </div>
     </footer>
