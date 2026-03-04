@@ -101,3 +101,17 @@ alter table monthly_notes enable row level security;
 
 create policy "Users can manage own monthly_notes"
   on monthly_notes for all using (auth.uid() = user_id);
+
+-- Email existence check for password reset
+create or replace function public.is_email_registered(email_input text)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from auth.users
+    where email = lower(email_input)
+      and deleted_at is null
+  );
+$$;

@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -41,6 +41,10 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
   const [isEditing, setIsEditing] = useState(false)
   const [nameValue, setNameValue] = useState(fullName)
   const [nameSaving, setNameSaving] = useState(false)
+
+  useEffect(() => {
+    setNameValue(fullName)
+  }, [fullName])
 
   // URL から現在の clientId を取得
   const match = pathname.match(/^\/dashboard\/([^/]+)/)
@@ -197,7 +201,7 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <div className="flex flex-col gap-1 text-xs px-4 py-3 border-t">
+        <div className="flex flex-col gap-4 text-xs px-4 py-6 border-t">
           <Link href="/privacy" className="text-primary hover:underline">プライバシーポリシー</Link>
           <Link href="/terms" className="text-primary hover:underline">利用規約</Link>
           <Link href="/contact" className="text-primary hover:underline">お問い合わせ</Link>

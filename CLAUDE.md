@@ -21,8 +21,11 @@ npm run test:watch   # テスト実行（ウォッチモード）
 ### ルートグループ
 - `app/(auth)/` — ログイン・サインアップページ（パブリック）。認証方法は email + password と Google OAuth の2方式。サインアップ後の氏名収集は `/dashboard/new` で行う
   - `app/(auth)/layout.tsx` — 認証ページ共通レイアウト（Work-Log ロゴ・テーマトグル付きヘッダー＋中央揃えコンテンツ）
-  - `app/(auth)/signup/comp/page.tsx` — メール確認案内ページ（signup 成功後にリダイレクト）。`mail.png` 画像付きビジュアルデザイン
-- `app/auth/callback/route.ts` — Google OAuth コールバックハンドラ。Supabase の `exchangeCodeForSession` でセッション確立後 `/dashboard` にリダイレクト
+  - `app/(auth)/signup/conf/page.tsx` — メール確認案内ページ（signup 成功後にリダイレクト）。`mail.png` 画像付き。送信完了メッセージとログインページへのリンクを表示
+  - `app/(auth)/signup/comp/page.tsx` — 本登録完了ページ（メール確認リンクから `/auth/callback?next=/signup/comp` 経由で到達）。`CheckCircle` アイコン + 完了メッセージ + ダッシュボードボタン。認証済みユーザーのみアクセス可（未認証は `/login` にリダイレクト）
+  - `app/(auth)/reset-password/page.tsx` — パスワードリセットリクエストページ（Client Component）。`is_email_registered` RPC でメール存在確認後、`resetPasswordForEmail` でリセットメール送信（`redirectTo: /auth/callback?next=/reset-password/update`）。送信後はインライン完了メッセージ表示
+  - `app/(auth)/reset-password/update/page.tsx` — 新しいパスワード設定ページ（Client Component）。パスワード・確認パスワードフォーム（zod で一致バリデーション）。`PasswordInput` コンポーネントで表示/非表示トグル付き。`updateUser` でパスワード更新後 `/login?reset=1` にリダイレクトしてサインアウト
+- `app/auth/callback/route.ts` — OAuth・メール確認コールバックハンドラ。Supabase の `exchangeCodeForSession` でセッション確立後、`next` クエリパラメータの URL にリダイレクト（デフォルト `/dashboard`）。エラー時は `/error` にリダイレクト。パスワードリセット時は `next=/reset-password/update`、メール本登録完了時は `next=/signup/comp` で使用
 - `app/(app)/` — 認証済みルート。サイドバーレイアウト付き
 - `app/(legal)/` — 法律情報ページ（パブリック）。LpHeader・LpFooter でラッピングした共通レイアウト
   - `app/(legal)/privacy/page.tsx` — プライバシーポリシーページ（収集情報・利用目的・データ管理・第三者提供などを日本語で記載）
@@ -31,8 +34,9 @@ npm run test:watch   # テスト実行（ウォッチモード）
 - `app/page.tsx` — ランディングページ（パブリック、未認証でもアクセス可）。LpHeader / LpFooter を使ったレイアウト。フィーチャーセクション（ワンクリック打刻・月次勤怠管理・PDF出力・複数クライアント対応）を2列グリッドで表示
 - `app/loading.tsx` — グローバルローディングスピナー（`min-h-screen` 中央揃え、`animate-spin` + `animate-pulse`）
 - `app/not-found.tsx` — グローバル404ページ。`notfound.png` 画像付きでトップページへのリンクを表示
+- `app/error/page.tsx` — エラーページ（パブリック）。`error.png` 画像付きでトップページへのリンクを表示。`app/auth/callback/route.ts` のエラー時にリダイレクト先として使用
 - `app/layout.tsx` — ルートレイアウト。`ThemeProvider`（next-themes）・`TooltipProvider`（shadcn/ui）・`Toaster`（sonner、`toastOptions.style` で `color-mix` を使ったプライマリカラーベースのスタイル）を配置
-- `proxy.ts` — Next.js 16 proxy。未認証ユーザーを `/login` にリダイレクト。パブリックページ（`/`・`/login`・`/signup`・`/auth/callback`・`/privacy`・`/terms`・`/contact`）は認証なしでアクセス可能
+- `proxy.ts` — Next.js 16 proxy。未認証ユーザーを `/login` にリダイレクト。パブリックページ（`/`・`/login`・`/signup`（`/signup/comp` を除く）・`/auth/callback`・`/privacy`・`/terms`・`/contact`・`/reset-password`・`/error`）は認証なしでアクセス可能
 
 ### API エンドポイント
 - `app/api/contact/route.ts` — お問い合わせ API（パブリック）。POST で `{ name, email, message }` を受け取り、`SLACK_WEBHOOK_URL` 環境変数に設定された Slack Webhook URL へ通知を送信
@@ -59,7 +63,7 @@ npm run test:watch   # テスト実行（ウォッチモード）
 ### Supabase 連携
 - `lib/supabase/client.ts` — ブラウザクライアント (`createBrowserClient`)
 - `lib/supabase/server.ts` — サーバークライアント（Cookie 使用）
-- `lib/supabase/middleware.ts` — `proxy.ts` から呼ばれるセッション更新・認証ルーティングヘルパー。未認証ユーザーをパブリックページ以外から `/login` にリダイレクト、認証済みユーザーが認証ページにアクセスした場合は `/dashboard` にリダイレクト
+- `lib/supabase/middleware.ts` — `proxy.ts` から呼ばれるセッション更新・認証ルーティングヘルパー。未認証ユーザーをパブリックページ以外から `/login` にリダイレクト、認証済みユーザーが認証ページ（`/login`・`/signup`）にアクセスした場合は `/dashboard` にリダイレクト。`/signup/comp` は認証済み必須ページのため `isAuthPage`・`isPublicPage` 両方から除外
 - `time_records` テーブルで Supabase Realtime を有効化（タブ間のリアルタイム同期）
 
 ### データベース（4テーブル、すべて RLS `auth.uid() = user_id`）
@@ -118,6 +122,7 @@ SLACK_WEBHOOK_URL=<slack-incoming-webhook-url>
 - インタラクティブなコンポーネントには `"use client"` ディレクティブを付与
 - コンポーネントファイルは kebab-case、`components/` 配下に機能ごとに整理
 - shadcn/ui コンポーネントは `components/ui/` に配置（style: new-york、icon: lucide）
+- パスワード入力フィールドは `<Input type="password">` でなく `components/ui/password-input.tsx` の `PasswordInput` を使用（Eye/EyeOff アイコンで表示/非表示トグル付き、`tabIndex={-1}` でトグルボタンをタブスキップ）
 - パスエイリアス `@/` はプロジェクトルートを指す（`src/` ではない）
 - フォームバリデーション: `react-hook-form` + `zod`（`@hookform/resolvers` 経由）を使用
 - フォームの送信中状態は `react-hook-form` の `formState.isSubmitting` を使わず `useState` で自前管理する。これにより `router.push` 後もボタンが「処理中」表示のままページ遷移できる

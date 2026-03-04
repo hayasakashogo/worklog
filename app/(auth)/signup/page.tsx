@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/ui/password-input"
 import { GoogleAuthButton, FormDivider, localizeError, handleGoogleAuth } from "@/components/auth/auth-form"
 
 const schema = z.object({
@@ -32,7 +33,13 @@ export default function SignupPage() {
     setServerError("")
     setIsSubmitting(true)
     const supabase = createClient()
-    const { data: authData, error } = await supabase.auth.signUp({ email: data.email, password: data.password })
+    const { data: authData, error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/signup/comp`,  // メール内のリンクをクリックした後に遷移するURL
+      }
+    })
     if (error) {
       setServerError(localizeError(error.message))
       setIsSubmitting(false)
@@ -45,7 +52,7 @@ export default function SignupPage() {
       setIsSubmitting(false)
       return
     }
-    router.push("/signup/comp")  // isSubmitting は true のまま遷移
+    router.push("/signup/conf")  // isSubmitting は true のまま遷移
   }
 
   return (
@@ -72,9 +79,8 @@ export default function SignupPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">パスワード</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             placeholder="6文字以上"
             {...register("password")}
           />

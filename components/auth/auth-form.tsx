@@ -17,6 +17,8 @@ export function localizeError(message: string): string {
   if (message.includes("Email not confirmed")) return "メールアドレスが確認されていません"
   if (message.includes("User already registered")) return "このメールアドレスはすでに登録されています"
   if (message.includes("too many requests") || message.includes("rate limit")) return "しばらく待ってから再試行してください"
+  if (message.includes("Password should be at least 6 characters")) return "パスワードは6文字以上で入力してください"
+  if (message.includes("New password should be different from the old password")) return "新しいパスワードは現在のパスワードと異なるものを設定してください"
   return message
 }
 
