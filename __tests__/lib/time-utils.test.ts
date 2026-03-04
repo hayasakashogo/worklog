@@ -1,5 +1,6 @@
 import {
   floorToFiveMinutes,
+  floorTimeStringToFiveMinutes,
   calcWorkingHours,
   formatHoursToHHMM,
   timeToMinutes,
@@ -25,6 +26,28 @@ describe("floorToFiveMinutes", () => {
   it("0:04 → 00:00", () => {
     const date = new Date(2026, 0, 1, 0, 4)
     expect(floorToFiveMinutes(date)).toBe("00:00")
+  })
+})
+
+describe("floorTimeStringToFiveMinutes", () => {
+  it("09:07 → 09:05", () => {
+    expect(floorTimeStringToFiveMinutes("09:07")).toBe("09:05")
+  })
+
+  it("18:13 → 18:10", () => {
+    expect(floorTimeStringToFiveMinutes("18:13")).toBe("18:10")
+  })
+
+  it("ちょうど5分刻みならそのまま", () => {
+    expect(floorTimeStringToFiveMinutes("10:30")).toBe("10:30")
+  })
+
+  it("00:04 → 00:00", () => {
+    expect(floorTimeStringToFiveMinutes("00:04")).toBe("00:00")
+  })
+
+  it("23:59 → 23:55", () => {
+    expect(floorTimeStringToFiveMinutes("23:59")).toBe("23:55")
   })
 })
 
