@@ -80,21 +80,32 @@ export function AppSidebar({ clients, fullName, avatarUrl }: { clients: Client[]
   const handleSaveName = async () => {
     if (!nameValue.trim()) return
     setNameSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase
-        .from("profiles")
-        .update({ full_name: nameValue.trim() })
-        .eq("id", user.id)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({ full_name: nameValue.trim() })
+          .eq("id", user.id)
+        if (error) throw error
+      }
+      setIsEditing(false)
+    } catch {
+      toast.error("名前の保存に失敗しました")
+    } finally {
+      setNameSaving(false)
     }
-    setNameSaving(false)
-    setIsEditing(false)
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push("/login")
-    router.refresh()
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      router.push("/login")
+      router.refresh()
+    } catch {
+      toast.error("ログアウトに失敗しました")
+    }
   }
 
   return (

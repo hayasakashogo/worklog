@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Work-Log
 
-## Getting Started
+フリーランス（準委任契約）向けの稼働記録ツール。日々の勤怠入力から月次の稼働報告書 PDF 出力まで、これひとつで完結します。
 
-First, run the development server:
+## 技術スタック
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+| カテゴリ | 技術 |
+|---|---|
+| フレームワーク | Next.js 16（App Router） |
+| 言語 | TypeScript（strict mode） |
+| スタイリング | Tailwind CSS v4 + shadcn/ui（New York スタイル） |
+| バックエンド/認証 | Supabase（PostgreSQL、Email + Google OAuth、Realtime） |
+| フォーム | React Hook Form + Zod |
+| アニメーション | Framer Motion |
+| PDF 生成 | jsPDF + jspdf-autotable（NotoSansJP フォント） |
+| テスト | Jest + React Testing Library |
+
+## セットアップ
+
+**前提条件**
+- Node.js 20+
+- npm
+- Supabase プロジェクト
+
+**環境変数**
+
+`.env.local` を作成し、以下を設定:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SLACK_WEBHOOK_URL=        # お問い合わせ通知用（任意）
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**インストール・起動**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+[http://localhost:3000](http://localhost:3000) で確認できます。
 
-## Learn More
+また、`supabase/schema.sql` を Supabase プロジェクトで実行してください。
 
-To learn more about Next.js, take a look at the following resources:
+## コマンド
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| コマンド | 説明 |
+|---|---|
+| `npm run dev` | 開発サーバー起動 |
+| `npm run build` | 本番ビルド |
+| `npm run lint` | ESLint 実行 |
+| `npm test` | テスト実行 |
+| `npm run test:watch` | テスト（ウォッチモード） |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## ディレクトリ構成
 
-## Deploy on Vercel
+```
+app/
+  (auth)/     — ログイン・サインアップ・パスワードリセット（パブリック）
+  (app)/      — 認証済みルート（打刻・勤怠一覧・クライアント管理）
+  (legal)/    — プライバシーポリシー・利用規約・お問い合わせ
+  auth/       — OAuth・メール確認コールバック
+components/
+  ui/         — shadcn/ui コンポーネント
+  layout/     — サイドバー・ヘッダー・フッターなど共通レイアウト
+  dashboard/  — 打刻（ClockDisplay, PunchButtons）
+  records/    — 月次勤怠テーブル・PDF 出力ボタン
+  clients/    — クライアント管理
+  lp/         — ランディングページ専用コンポーネント
+lib/
+  supabase/   — ブラウザ・サーバー・ミドルウェア用クライアント
+  time-utils.ts     — 時刻計算・フォーマット
+  holidays.ts       — 祝日・休日判定
+  missing-dates.ts  — 勤怠漏れチェック
+  pdf/              — 稼働報告書 PDF 生成
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 実装のポイント
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**リアルタイム同期**
+
+Supabase Realtime を使い、`time_records` テーブルの変更をタブ間でリアルタイム同期。Server Component で初期データを取得し、Client Component が Realtime チャンネルをサブスクライブするハイブリッド構成。
+
+**状態管理**
+
+URL ベースで状態を管理（`clientId`・`yearMonth` をパスパラメータとして保持）。Redux / Zustand は不使用。Supabase クエリはコンポーネント内で直接実行。
+
+**認証**
+
+メールアドレス + パスワードおよび Google OAuth の2方式に対応。Supabase SSR でサーバーサイドセッション管理を行い、ミドルウェアレベルで認証チェック。
+
+**PDF 出力**
+
+jsPDF + jspdf-autotable で稼働報告書を生成。出力前に未入力日をチェックし、漏れがある場合は警告を表示。ファイル名はクライアントごとのテンプレート（`{YYYY}`, `{MM}`, `{CLIENT}`）から自動生成。
+
+**複数クライアント対応**
+
+クライアントごとに標準工数・定時・休日曜日・祝日設定・PDF ファイル名テンプレートを個別管理。サイドバーのプルダウンで切り替え可能。

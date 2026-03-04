@@ -14,37 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { generateReport, generateReportBlobUrl } from "@/lib/pdf/generate-report"
-import { getDaysInMonth, isClientHoliday } from "@/lib/holidays"
-
-type TimeRecord = {
-  date: string
-  start_time: string | null
-  end_time: string | null
-  rest_minutes: number
-  note: string
-  is_off?: boolean
-}
-
-function formatDate(date: Date): string {
-  const y = date.getFullYear()
-  const m = (date.getMonth() + 1).toString().padStart(2, "0")
-  const d = date.getDate().toString().padStart(2, "0")
-  return `${y}-${m}-${d}`
-}
-
-function computeMissingDates(records: TimeRecord[], client: Client, year: number, month: number): string[] {
-  const recordMap = new Map(records.map((r) => [r.date, r]))
-  const days = getDaysInMonth(year, month)
-
-  return days
-    .filter((day) => {
-      if (isClientHoliday(day, client)) return false
-      const record = recordMap.get(formatDate(day))
-      if (record?.is_off) return false
-      return !record || record.start_time === null || record.end_time === null
-    })
-    .map((day) => formatDate(day))
-}
+import { computeMissingDates, type TimeRecord } from "@/lib/missing-dates"
 
 export function ExportPdfButton({
   client,
@@ -69,27 +39,35 @@ export function ExportPdfButton({
     const endDate = `${year}-${month.toString().padStart(2, "0")}-${lastDay}`
     const yearMonth = `${year}-${month.toString().padStart(2, "0")}`
 
-    const [recordsResult, profileResult, noteResult] = await Promise.all([
-      supabase
-        .from("time_records")
-        .select("*")
-        .eq("client_id", client.id)
-        .gte("date", startDate)
-        .lte("date", endDate)
-        .order("date"),
-      supabase.from("profiles").select("full_name").single(),
-      supabase
-        .from("monthly_notes")
-        .select("note")
-        .eq("client_id", client.id)
-        .eq("year_month", yearMonth)
-        .maybeSingle(),
-    ])
+    try {
+      const [recordsResult, profileResult, noteResult] = await Promise.all([
+        supabase
+          .from("time_records")
+          .select("*")
+          .eq("client_id", client.id)
+          .gte("date", startDate)
+          .lte("date", endDate)
+          .order("date"),
+        supabase.from("profiles").select("full_name").single(),
+        supabase
+          .from("monthly_notes")
+          .select("note")
+          .eq("client_id", client.id)
+          .eq("year_month", yearMonth)
+          .maybeSingle(),
+      ])
 
-    return {
-      records: (recordsResult.data ?? []) as TimeRecord[],
-      fullName: profileResult.data?.full_name ?? "",
-      remarks: noteResult.data?.note ?? "",
+      if (recordsResult.error) throw recordsResult.error
+      if (profileResult.error) throw profileResult.error
+
+      return {
+        records: (recordsResult.data ?? []) as TimeRecord[],
+        fullName: profileResult.data?.full_name ?? "",
+        remarks: noteResult.data?.note ?? "",
+      }
+    } catch (err) {
+      toast.error("データの取得に失敗しました")
+      throw err
     }
   }
 

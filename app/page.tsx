@@ -4,8 +4,9 @@ import { UserPlus, Clock, FileDown, Check, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LpHeader } from "@/components/layout/lp-header"
 import { LpFooter } from "@/components/layout/lp-footer"
+import { PdfPreviewButton } from "@/components/lp/pdf-preview-button"
 
-const features = [
+const features: { image: string; title: string; description: string; checks: string[]; sampleUrl?: string }[] = [
   {
     image: "/lp/stamp.png",
     title: "ワンクリック打刻",
@@ -23,6 +24,7 @@ const features = [
     title: "稼働報告書をワンクリック出力",
     description: "クライアントへの月次報告書をPDFで即座に出力。ファイル名も自動生成。",
     checks: ["入力漏れを事前にチェック", "備考欄付きPDF生成", "ファイル名テンプレートに対応"],
+    sampleUrl: "/pdf/sample.pdf",
   },
   {
     image: "/lp/clients.png",
@@ -172,6 +174,7 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
+                  {f.sampleUrl && <PdfPreviewButton src={f.sampleUrl} />}
                 </div>
               ))}
             </div>

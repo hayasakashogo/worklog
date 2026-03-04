@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { floorToFiveMinutes, todayString, calcWorkingHours, formatHoursToHHMM } from "@/lib/time-utils"
 import { isClientHoliday } from "@/lib/holidays"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 type TimeRecord = {
   id: string
@@ -52,31 +53,37 @@ export function PunchButtons({
   const [noteSaving, setNoteSaving] = useState(false)
 
   const fetchTodayRecord = useCallback(async () => {
-    const { data } = await supabase
-      .from("time_records")
-      .select("*")
-      .eq("client_id", client.id)
-      .eq("date", todayString())
-      .maybeSingle()
+    try {
+      const { data, error } = await supabase
+        .from("time_records")
+        .select("*")
+        .eq("client_id", client.id)
+        .eq("date", todayString())
+        .maybeSingle()
 
-    if (data) {
-      setRecord(data)
-      setRestMinutes(data.rest_minutes)
-      setIsOff(data.is_off)
-      setNoteValue(data.note ?? "")
-      if (data.end_time) {
-        setStatus("finished")
-      } else if (data.start_time) {
-        setStatus("working")
+      if (error) throw error
+
+      if (data) {
+        setRecord(data)
+        setRestMinutes(data.rest_minutes)
+        setIsOff(data.is_off)
+        setNoteValue(data.note ?? "")
+        if (data.end_time) {
+          setStatus("finished")
+        } else if (data.start_time) {
+          setStatus("working")
+        } else {
+          setStatus("not_started")
+        }
       } else {
+        setRecord(null)
+        setRestMinutes(client.default_rest_minutes)
+        setIsOff(todayIsOff)
+        setNoteValue("")
         setStatus("not_started")
       }
-    } else {
-      setRecord(null)
-      setRestMinutes(client.default_rest_minutes)
-      setIsOff(todayIsOff)
-      setNoteValue("")
-      setStatus("not_started")
+    } catch {
+      toast.error("勤怠データの取得に失敗しました")
     }
   }, [client.id, client.default_rest_minutes, supabase, todayIsOff])
 
@@ -105,69 +112,90 @@ export function PunchButtons({
 
   const handlePunchIn = async () => {
     setLoading(true)
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return
+      const startTime = floorToFiveMinutes(new Date())
 
-    const startTime = floorToFiveMinutes(new Date())
+      const { error } = await supabase.from("time_records").upsert(
+        {
+          user_id: user.id,
+          client_id: client.id,
+          date: todayString(),
+          start_time: startTime,
+          rest_minutes: restMinutes,
+        },
+        { onConflict: "client_id,date" }
+      )
+      if (error) throw error
 
-    await supabase.from("time_records").upsert(
-      {
-        user_id: user.id,
-        client_id: client.id,
-        date: todayString(),
-        start_time: startTime,
-        rest_minutes: restMinutes,
-      },
-      { onConflict: "client_id,date" }
-    )
-
-    await fetchTodayRecord()
-    setLoading(false)
+      await fetchTodayRecord()
+    } catch {
+      toast.error("出勤の記録に失敗しました")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handlePunchOut = async () => {
     if (!record) return
     setLoading(true)
+    try {
+      const endTime = floorToFiveMinutes(new Date())
 
-    const endTime = floorToFiveMinutes(new Date())
+      const { error } = await supabase
+        .from("time_records")
+        .update({ end_time: endTime, rest_minutes: restMinutes })
+        .eq("id", record.id)
+      if (error) throw error
 
-    await supabase
-      .from("time_records")
-      .update({ end_time: endTime, rest_minutes: restMinutes })
-      .eq("id", record.id)
-
-    await fetchTodayRecord()
-    setLoading(false)
+      await fetchTodayRecord()
+    } catch {
+      toast.error("退勤の記録に失敗しました")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleToggleOff = async (checked: boolean) => {
     setIsOff(checked)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
-    await supabase.from("time_records").upsert(
-      {
-        user_id: user.id,
-        client_id: client.id,
-        date: todayString(),
-        is_off: checked,
-        rest_minutes: restMinutes,
-      },
-      { onConflict: "client_id,date" }
-    )
-    fetchTodayRecord()
+      const { error } = await supabase.from("time_records").upsert(
+        {
+          user_id: user.id,
+          client_id: client.id,
+          date: todayString(),
+          is_off: checked,
+          rest_minutes: restMinutes,
+        },
+        { onConflict: "client_id,date" }
+      )
+      if (error) throw error
+      fetchTodayRecord()
+    } catch {
+      toast.error("休み設定の更新に失敗しました")
+    }
   }
 
   const handleSaveNote = async () => {
     if (!record?.id) return
     setNoteSaving(true)
-    await supabase.from("time_records").update({ note: noteValue }).eq("id", record.id)
-    setNoteSaving(false)
+    try {
+      const { error } = await supabase.from("time_records").update({ note: noteValue }).eq("id", record.id)
+      if (error) throw error
+    } catch {
+      toast.error("備考の保存に失敗しました")
+    } finally {
+      setNoteSaving(false)
+    }
   }
 
   const workingHours =

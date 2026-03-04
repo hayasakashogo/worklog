@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table"
 import { getDaysInMonth, getWeekdayLabel, isHoliday, getHolidayLabel, isClientHoliday } from "@/lib/holidays"
 import { calcWorkingHours, formatHoursToHHMM, timeToMinutes, floorTimeStringToFiveMinutes } from "@/lib/time-utils"
+import { toast } from "sonner"
 
 type TimeRecord = {
   id?: string
@@ -69,20 +70,26 @@ export function MonthlyTable({
   const [isSavingNote, setIsSavingNote] = useState(false)
 
   const fetchRecords = useCallback(async () => {
-    const monthStr = month.toString().padStart(2, "0")
-    const startDate = `${year}-${monthStr}-01`
-    const endDate = `${year}-${monthStr}-${new Date(year, month, 0).getDate()}`
+    try {
+      const monthStr = month.toString().padStart(2, "0")
+      const startDate = `${year}-${monthStr}-01`
+      const endDate = `${year}-${monthStr}-${new Date(year, month, 0).getDate()}`
 
-    const { data } = await supabase
-      .from("time_records")
-      .select("*")
-      .eq("client_id", client.id)
-      .gte("date", startDate)
-      .lte("date", endDate)
+      const { data, error } = await supabase
+        .from("time_records")
+        .select("*")
+        .eq("client_id", client.id)
+        .gte("date", startDate)
+        .lte("date", endDate)
 
-    const map = new Map<string, TimeRecord>()
-    data?.forEach((r) => map.set(r.date, r))
-    setRecords(map)
+      if (error) throw error
+
+      const map = new Map<string, TimeRecord>()
+      data?.forEach((r) => map.set(r.date, r))
+      setRecords(map)
+    } catch {
+      toast.error("勤怠データの取得に失敗しました")
+    }
   }, [client.id, year, month, supabase])
 
   // Realtime subscription
@@ -134,64 +141,75 @@ export function MonthlyTable({
 
   const saveEdit = async (dateStr: string, field: string, value: string) => {
     const existing = records.get(dateStr)
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return
+      const updateData: Record<string, unknown> = {}
 
-    const updateData: Record<string, unknown> = {}
+      if (field === "start_time" || field === "end_time") {
+        updateData[field] = value ? floorTimeStringToFiveMinutes(value) : null
+      } else if (field === "rest_minutes") {
+        updateData[field] = value ? Number(value) : 0
+      } else if (field === "note") {
+        updateData[field] = value
+      }
 
-    if (field === "start_time" || field === "end_time") {
-      updateData[field] = value ? floorTimeStringToFiveMinutes(value) : null
-    } else if (field === "rest_minutes") {
-      updateData[field] = value ? Number(value) : 0
-    } else if (field === "note") {
-      updateData[field] = value
+      if (existing?.id) {
+        const { error } = await supabase.from("time_records").update(updateData).eq("id", existing.id)
+        if (error) throw error
+      } else {
+        const dateObj = new Date(dateStr)
+        const defaultIsOff = isClientHoliday(dateObj, client)
+        const { error } = await supabase.from("time_records").insert({
+          user_id: user.id,
+          client_id: client.id,
+          date: dateStr,
+          start_time: null,
+          end_time: null,
+          rest_minutes: client.default_rest_minutes,
+          note: "",
+          is_off: defaultIsOff,
+          ...updateData,
+        })
+        if (error) throw error
+      }
+
+      setEditingCell(null)
+      fetchRecords()
+    } catch {
+      toast.error("勤怠データの保存に失敗しました")
     }
-
-    if (existing?.id) {
-      await supabase.from("time_records").update(updateData).eq("id", existing.id)
-    } else {
-      const dateObj = new Date(dateStr)
-      const defaultIsOff = isClientHoliday(dateObj, client)
-      await supabase.from("time_records").insert({
-        user_id: user.id,
-        client_id: client.id,
-        date: dateStr,
-        start_time: null,
-        end_time: null,
-        rest_minutes: client.default_rest_minutes,
-        note: "",
-        is_off: defaultIsOff,
-        ...updateData,
-      })
-    }
-
-    setEditingCell(null)
-    fetchRecords()
   }
 
   const saveIsOff = async (date: string, checked: boolean) => {
     const existing = records.get(date)
-    if (existing?.id) {
-      await supabase.from("time_records")
-        .update({ is_off: checked })
-        .eq("id", existing.id)
-    } else {
-      const { data: { user } } = await supabase.auth.getUser()
-      await supabase.from("time_records").insert({
-        user_id: user!.id,
-        client_id: client.id,
-        date,
-        is_off: checked,
-        start_time: null,
-        end_time: null,
-        rest_minutes: client.default_rest_minutes,
-        note: ""
-      })
+    try {
+      if (existing?.id) {
+        const { error } = await supabase.from("time_records")
+          .update({ is_off: checked })
+          .eq("id", existing.id)
+        if (error) throw error
+      } else {
+        const { data: { user } } = await supabase.auth.getUser()
+        const { error } = await supabase.from("time_records").insert({
+          user_id: user!.id,
+          client_id: client.id,
+          date,
+          is_off: checked,
+          start_time: null,
+          end_time: null,
+          rest_minutes: client.default_rest_minutes,
+          note: ""
+        })
+        if (error) throw error
+      }
+      fetchRecords()
+    } catch {
+      toast.error("休み設定の更新に失敗しました")
     }
-    fetchRecords()
   }
 
   const saveMonthlyNote = async () => {

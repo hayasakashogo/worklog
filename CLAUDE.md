@@ -77,6 +77,7 @@ npm run test:watch   # テスト実行（ウォッチモード）
 ### 主要ユーティリティ
 - `lib/time-utils.ts` — `floorToFiveMinutes()`（打刻時刻を5分単位で切り捨て）、`floorTimeStringToFiveMinutes()`（HH:MM 形式の文字列を5分単位で切り捨て）、`calcWorkingHours()`、`formatHoursToHHMM()`、`timeToMinutes()`、`todayString()`
 - `lib/holidays.ts` — `japanese-holidays` ライブラリのラッパー。`isHoliday()` は boolean、`getHolidayLabel()` は祝日名、`getDaysInMonth()`、`getWeekdayLabel()`、`isClientHoliday()`（クライアント設定の曜日休日・祝日設定を考慮した休日判定）を提供
+- `lib/missing-dates.ts` — 勤怠漏れチェックユーティリティ。`TimeRecord` 型と `computeMissingDates(records, client, year, month)`（非休日の勤務日でレコードなし・未入力の日付を `YYYY-MM-DD` 形式の配列で返す）・`formatDate(date)` を提供。`export-pdf-button.tsx` の PDF 出力前バリデーションで使用
 - `lib/pdf/generate-report.ts` — jspdf + jspdf-autotable で稼働報告書 PDF を生成。NotoSansJP フォントを `/public/fonts/` から読み込み。備考欄はページ幅50%の枠線付きで常に描画（空でも表示）し、改行・折り返しに対応
 
 ### 主要コンポーネント
@@ -91,7 +92,7 @@ npm run test:watch   # テスト実行（ウォッチモード）
 - `components/dashboard/punch-buttons.tsx` — 出退勤ボタン。`client` と `initialRecord` を props で受け取り、Realtime でライブ更新。`is_off`（本日休み）チェックボックス・`note`（業務内容・備考）テキストエリア（onBlur 保存）を備える。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` 初期値に反映。ステータスに応じたカードのグラデーションバーと状態バッジ（出勤中はパルスアニメーション）を表示
 - `components/records/records-page-content.tsx` — 勤怠一覧ページの Client Component。`initialNote?` prop を受け取り `MonthlyTable` に転送。PDF出力時の勤怠漏れチェック結果（`highlightDates`）を状態管理し、漏れがある場合は警告バナーを表示。`ExportPdfButton` と警告バナーを `headerAction` prop 経由で `MonthlyTable` カードヘッダー内に注入する構成
 - `components/records/monthly-table.tsx` — 月次勤怠テーブル。`client`, `initialRecords`, `year`, `month`, `highlightDates?`, `initialNote?`, `headerAction?: React.ReactNode` を props で受け取り、月切り替えは `router.push` でURL遷移。`headerAction` が渡された場合は CardHeader 上部に描画（PDF ボタン・警告バナーの注入に使用）。列構成: 日・曜日（祝日名をサブテキストで表示）・休みチェックボックス・開始・終了・休憩・稼働時間・業務内容備考。セルはクリックで編集モードに入るインライン編集方式（`renderEditableCell`）で、`note` 列はクリックで `Textarea`、時刻・数値列は `Input` に切り替わる。開始・終了時刻は5分刻み（`step={300}`）、休憩は5分刻み数値入力。保存時に `floorTimeStringToFiveMinutes()` で時刻を5分単位に切り捨て。ヘッダーに合計稼働時間・標準工数範囲・推定稼働時間を表示。合計稼働時間の下に月次備考 `Textarea`（onBlur で `monthly_notes` に upsert）を表示。`isClientHoliday()` でクライアント設定の休日を自動判定し `is_off` デフォルト値に反映。Realtime でタブ間同期。`highlightDates` に含まれる日付のセルは赤枠強調表示
-- `components/records/export-pdf-button.tsx` — PDF出力ボタン。`client`, `year`, `month`, `onMissingCheck` を props で受け取る。クリック時にまず稼働データ有無を確認（なければ sonner でエラートースト「この月には稼働データがありません」を表示して終了）。次に勤怠漏れチェック（`computeMissingDates`）を実行し（過去・今日・未来日を問わず非休日の勤務日でレコードがない or 未入力を漏れとみなす）、漏れがあれば `onMissingCheck` コールバックに日付リストを渡して終了。漏れがなければ `fetchData()` 内で `monthly_notes` も取得し `remarks` として `generateReportBlobUrl` に渡して PDF を生成、プレビューダイアログ（`<Dialog>` + `<iframe>`）を開く。ダイアログ内のダウンロードボタンで `generateReport` を呼び出してファイル保存する
+- `components/records/export-pdf-button.tsx` — PDF出力ボタン。`client`, `year`, `month`, `onMissingCheck` を props で受け取る。クリック時にまず稼働データ有無を確認（なければ sonner でエラートースト「この月には稼働データがありません」を表示して終了）。次に勤怠漏れチェック（`computeMissingDates`、`@/lib/missing-dates` からインポート）を実行し（過去・今日・未来日を問わず非休日の勤務日でレコードがない or 未入力を漏れとみなす）、漏れがあれば `onMissingCheck` コールバックに日付リストを渡して終了。漏れがなければ `fetchData()` 内で `monthly_notes` も取得し `remarks` として `generateReportBlobUrl` に渡して PDF を生成、プレビューダイアログ（`<Dialog>` + `<iframe>`）を開く。ダイアログ内のダウンロードボタンで `generateReport` を呼び出してファイル保存する
 - `components/clients/clients-page-content.tsx` — クライアント管理画面の Client Component。`clients` と `currentClientId` を props で受け取る。Table レイアウトで一覧表示し、各行にカスタム円形ボタン（アクティブクライアント切り替え、`rounded-full border-2 border-primary` スタイルで内側ドットで選択状態を表現）・クライアント名・標準工数（min〜max h）・定時（開始〜終了）・休憩分・休み設定（曜日＋祝日）・編集ボタン・削除ボタンを表示。ボタン押下時は `router.push` でクライアント切り替えと `sonner` トースト通知。削除時は confirm ダイアログ表示後 Supabase で削除し、削除対象が現在のクライアントなら `/dashboard` にリダイレクト
 - `components/clients/client-form-dialog.tsx` — クライアント追加・編集フォームダイアログ（`clients-page-content` から利用）
 - `components/setup/setup-wizard.tsx` — 初回セットアップウィザード（Client Component）。2ステップ形式: Step1で氏名を `profiles` に保存、Step2でクライアント情報を `clients` に INSERT して `/dashboard/{id}` に遷移
@@ -105,8 +106,12 @@ npm run test:watch   # テスト実行（ウォッチモード）
 
 ### テスト
 - Jest + React Testing Library（`jest.config.ts`、`jest.setup.ts`）
-- テストは `__tests__/` ディレクトリにソース構造をミラーして配置
-- `__tests__/lib/time-utils.test.ts`、`__tests__/lib/holidays.test.ts`
+- テストは `__tests__/` ディレクトリにソース構造をミラーして配置。ユーティリティは `.ts`、JSX を含むコンポーネントテストは `.tsx`
+- `__tests__/lib/time-utils.test.ts` — `floorToFiveMinutes` 等の時刻ユーティリティ・`todayString`
+- `__tests__/lib/holidays.test.ts` — `isHoliday`・`getHolidayLabel`・`getDaysInMonth`・`getWeekdayLabel`・`isClientHoliday`
+- `__tests__/lib/missing-dates.test.ts` — `formatDate`・`computeMissingDates`（祝日・休日・leap year を含む）
+- `__tests__/components/auth/auth-form.test.tsx` — `localizeError`・`GoogleAuthButton`・`FormDivider`
+- `__tests__/components/dashboard/clock-display.test.tsx` — 初期レンダリング（`now === null`）・タイマー起動後の日時表示（fake timers 使用）
 
 ## 環境変数
 
@@ -126,4 +131,5 @@ SLACK_WEBHOOK_URL=<slack-incoming-webhook-url>
 - パスエイリアス `@/` はプロジェクトルートを指す（`src/` ではない）
 - フォームバリデーション: `react-hook-form` + `zod`（`@hookform/resolvers` 経由）を使用
 - フォームの送信中状態は `react-hook-form` の `formState.isSubmitting` を使わず `useState` で自前管理する。これにより `router.push` 後もボタンが「処理中」表示のままページ遷移できる
+- async関数は必ずtry-catchでエラーハンドリングを行う。Client Componentではcatch内でsonnerのtoastを使ってエラーを通知する（例: `toast.error("エラーが発生しました")`）。Supabaseクエリは`.error`プロパティもあわせて確認する
 - ドキュメント: `.docs/要件定義.md`（要件定義）、`.docs/実装プラン.md`（実装プラン）、`.docs/メモ.md`（機能メモ・改善候補）
