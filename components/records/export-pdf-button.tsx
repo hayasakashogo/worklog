@@ -69,27 +69,35 @@ export function ExportPdfButton({
     const endDate = `${year}-${month.toString().padStart(2, "0")}-${lastDay}`
     const yearMonth = `${year}-${month.toString().padStart(2, "0")}`
 
-    const [recordsResult, profileResult, noteResult] = await Promise.all([
-      supabase
-        .from("time_records")
-        .select("*")
-        .eq("client_id", client.id)
-        .gte("date", startDate)
-        .lte("date", endDate)
-        .order("date"),
-      supabase.from("profiles").select("full_name").single(),
-      supabase
-        .from("monthly_notes")
-        .select("note")
-        .eq("client_id", client.id)
-        .eq("year_month", yearMonth)
-        .maybeSingle(),
-    ])
+    try {
+      const [recordsResult, profileResult, noteResult] = await Promise.all([
+        supabase
+          .from("time_records")
+          .select("*")
+          .eq("client_id", client.id)
+          .gte("date", startDate)
+          .lte("date", endDate)
+          .order("date"),
+        supabase.from("profiles").select("full_name").single(),
+        supabase
+          .from("monthly_notes")
+          .select("note")
+          .eq("client_id", client.id)
+          .eq("year_month", yearMonth)
+          .maybeSingle(),
+      ])
 
-    return {
-      records: (recordsResult.data ?? []) as TimeRecord[],
-      fullName: profileResult.data?.full_name ?? "",
-      remarks: noteResult.data?.note ?? "",
+      if (recordsResult.error) throw recordsResult.error
+      if (profileResult.error) throw profileResult.error
+
+      return {
+        records: (recordsResult.data ?? []) as TimeRecord[],
+        fullName: profileResult.data?.full_name ?? "",
+        remarks: noteResult.data?.note ?? "",
+      }
+    } catch (err) {
+      toast.error("データの取得に失敗しました")
+      throw err
     }
   }
 

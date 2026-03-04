@@ -126,4 +126,5 @@ SLACK_WEBHOOK_URL=<slack-incoming-webhook-url>
 - パスエイリアス `@/` はプロジェクトルートを指す（`src/` ではない）
 - フォームバリデーション: `react-hook-form` + `zod`（`@hookform/resolvers` 経由）を使用
 - フォームの送信中状態は `react-hook-form` の `formState.isSubmitting` を使わず `useState` で自前管理する。これにより `router.push` 後もボタンが「処理中」表示のままページ遷移できる
+- async関数は必ずtry-catchでエラーハンドリングを行う。Client Componentではcatch内でsonnerのtoastを使ってエラーを通知する（例: `toast.error("エラーが発生しました")`）。Supabaseクエリは`.error`プロパティもあわせて確認する
 - ドキュメント: `.docs/要件定義.md`（要件定義）、`.docs/実装プラン.md`（実装プラン）、`.docs/メモ.md`（機能メモ・改善候補）

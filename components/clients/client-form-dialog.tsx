@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -103,31 +104,37 @@ export function ClientFormDialog({
 
   const handleSave = async (data: FormData) => {
     setLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+      const payload = {
+        name: data.name.trim(),
+        min_hours: data.min_hours,
+        max_hours: data.max_hours,
+        default_start_time: data.default_start_time,
+        default_end_time: data.default_end_time,
+        default_rest_minutes: data.default_rest_minutes,
+        holidays: data.holidays,
+        include_national_holidays: data.include_national_holidays,
+        pdf_filename_template: data.pdf_filename_template,
+      }
 
-    const payload = {
-      name: data.name.trim(),
-      min_hours: data.min_hours,
-      max_hours: data.max_hours,
-      default_start_time: data.default_start_time,
-      default_end_time: data.default_end_time,
-      default_rest_minutes: data.default_rest_minutes,
-      holidays: data.holidays,
-      include_national_holidays: data.include_national_holidays,
-      pdf_filename_template: data.pdf_filename_template,
+      if (editingClient?.id) {
+        const { error } = await supabase.from("clients").update(payload).eq("id", editingClient.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from("clients").insert({ ...payload, user_id: user.id })
+        if (error) throw error
+      }
+
+      onOpenChange(false)
+      onSaved()
+    } catch {
+      toast.error("クライアントの保存に失敗しました")
+    } finally {
+      setLoading(false)
     }
-
-    if (editingClient?.id) {
-      await supabase.from("clients").update(payload).eq("id", editingClient.id)
-    } else {
-      await supabase.from("clients").insert({ ...payload, user_id: user.id })
-    }
-
-    setLoading(false)
-    onOpenChange(false)
-    onSaved()
   }
 
   const toggleHoliday = (day: number) => {

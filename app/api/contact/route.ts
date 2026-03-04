@@ -14,13 +14,17 @@ export async function POST(req: Request) {
     text: `*新しいお問い合わせ*\n名前: ${name}\nメール: ${email}\n内容:\n${message}`,
   }
 
-  const slackRes = await fetch(webhookUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  })
+  try {
+    const slackRes = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
 
-  if (!slackRes.ok) {
+    if (!slackRes.ok) {
+      return Response.json({ error: "送信に失敗しました" }, { status: 500 })
+    }
+  } catch {
     return Response.json({ error: "送信に失敗しました" }, { status: 500 })
   }
 

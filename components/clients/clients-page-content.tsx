@@ -34,14 +34,19 @@ export function ClientsPageContent({
   const router = useRouter()
 
   const refreshClients = async () => {
-    const { data } = await supabase
-      .from("clients")
-      .select("*")
-      .order("created_at", { ascending: true })
-    if (data) {
-      setClients(data as Client[])
+    try {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .order("created_at", { ascending: true })
+      if (error) throw error
+      if (data) {
+        setClients(data as Client[])
+      }
+      router.refresh()
+    } catch {
+      toast.error("クライアント一覧の取得に失敗しました")
     }
-    router.refresh()
   }
 
   const handleEdit = (client: Client) => {
@@ -56,11 +61,16 @@ export function ClientsPageContent({
 
   const handleDelete = async (id: string) => {
     if (!confirm("このクライアントを削除しますか？関連する勤怠データも削除されます。")) return
-    await supabase.from("clients").delete().eq("id", id)
-    await refreshClients()
-    // 削除したのが現在のクライアントなら、別のクライアントにリダイレクト
-    if (id === currentClientId) {
-      router.push("/dashboard")
+    try {
+      const { error } = await supabase.from("clients").delete().eq("id", id)
+      if (error) throw error
+      await refreshClients()
+      // 削除したのが現在のクライアントなら、別のクライアントにリダイレクト
+      if (id === currentClientId) {
+        router.push("/dashboard")
+      }
+    } catch {
+      toast.error("クライアントの削除に失敗しました")
     }
   }
 
