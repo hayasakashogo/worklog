@@ -35,12 +35,15 @@ export async function updateSession(request: NextRequest) {
 
   const isPublicPage =
     request.nextUrl.pathname === "/" ||
+    request.nextUrl.pathname === "/reset-password" ||
     request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup") ||
+    (request.nextUrl.pathname.startsWith("/signup") &&
+      !request.nextUrl.pathname.startsWith("/signup/comp")) ||
     request.nextUrl.pathname.startsWith("/auth/callback") ||
     request.nextUrl.pathname.startsWith("/privacy") ||
     request.nextUrl.pathname.startsWith("/terms") ||
-    request.nextUrl.pathname.startsWith("/contact")
+    request.nextUrl.pathname.startsWith("/contact") ||
+    request.nextUrl.pathname.startsWith("/error")
 
   if (!user && !isPublicPage) {
     const url = request.nextUrl.clone()
@@ -50,7 +53,8 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup")
+    (request.nextUrl.pathname.startsWith("/signup") &&
+      !request.nextUrl.pathname.startsWith("/signup/comp"))
 
   if (user && isAuthPage) {
     const url = request.nextUrl.clone()

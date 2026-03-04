@@ -1,15 +1,17 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useRef, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PasswordInput } from "@/components/ui/password-input"
 import { GoogleAuthButton, FormDivider, localizeError, handleGoogleAuth } from "@/components/auth/auth-form"
 
 const schema = z.object({
@@ -19,14 +21,24 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-export default function LoginPage() {
+function LoginForm() {
   const [serverError, setServerError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const toastShown = useRef(false)
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     mode: "onTouched",
   })
+
+  useEffect(() => {
+    if (searchParams.get("reset") === "1" && !toastShown.current) {
+      toastShown.current = true
+      toast.success("パスワードをリセットしました")
+      router.replace("/login")
+    }
+  }, [searchParams, router])
 
   const onSubmit = async (data: FormData) => {
     setServerError("")
@@ -66,13 +78,18 @@ export default function LoginPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">パスワード</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             placeholder="パスワードを入力"
             {...register("password")}
           />
           {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          <p className="text-sm text-muted-foreground">
+            パスワードをお忘れの方は{" "}
+            <Link href="/reset-password" className="text-primary underline underline-offset-4 font-bold">
+              こちら
+            </Link>
+          </p>
         </div>
         {serverError && <p className="text-sm text-destructive">{serverError}</p>}
         <div className="flex justify-center">
@@ -89,5 +106,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

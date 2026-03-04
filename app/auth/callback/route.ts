@@ -6,11 +6,13 @@ export async function GET(request: Request) {
   const code = searchParams.get("code")
   const next = searchParams.get("next") ?? "/dashboard"
 
-  if (code) {
+  try {
+    if (!code) throw new Error("Authorization code is missing")
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) return NextResponse.redirect(`${origin}${next}`)
+    if (error) throw new Error(error.message)
+    return NextResponse.redirect(`${origin}${next}`)
+  } catch {
+    return NextResponse.redirect(`${origin}/error`)
   }
-
-  return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
 }

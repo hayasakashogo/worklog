@@ -83,7 +83,7 @@ export default function Home() {
           </div>
 
           <div className="container mx-auto max-w-6xl">
-            <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+            <div className="grid grid-cols-1 items-center gap-4 lg:grid-cols-2">
               {/* 左: テキストコンテンツ */}
               <div>
                 {/* フィーチャータグ */}
@@ -105,7 +105,7 @@ export default function Home() {
                   </span>
                 </h1>
 
-                <p className="mt-5 max-w-lg text-muted-foreground">
+                <p className="mt-5 mx-auto max-w-lg text-muted-foreground">
                   Work-Log は準委任契約のフリーランス向け稼働記録ツールです。<br />
                   日々の勤怠入力から月次の稼働報告書PDF出力まで、これひとつで完結します。
                 </p>
@@ -121,13 +121,21 @@ export default function Home() {
               {/* 右: モックアップ */}
               <div className="relative">
                 <div aria-hidden className="absolute -right-10 -top-10 h-72 w-72 rounded-full bg-primary/10 blur-2xl -z-10" />
-                <div className="rounded-xl shadow-2xl shadow-primary/15 overflow-hidden">
+                <div className="shadow-2xl shadow-primary/15">
                   <Image
                     src="/lp/mock-worklog.png"
                     alt="Work-Log ダッシュボード画面"
                     width={1200}
                     height={750}
-                    className="w-full"
+                    className="w-full dark:hidden"
+                    priority
+                  />
+                  <Image
+                    src="/lp/mock-worklog--dark.png"
+                    alt="Work-Log ダッシュボード画面"
+                    width={1200}
+                    height={750}
+                    className="w-full hidden dark:block"
                     priority
                   />
                 </div>
