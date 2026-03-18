@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { LogIn, LogOut } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import type { Client } from "@/types/client"
@@ -34,7 +34,7 @@ export function PunchButtons({
   initialRecord: TimeRecord | null
 }) {
   const supabase = createClient()
-  const todayIsOff = isClientHoliday(new Date(), client)
+  const dateRef = useRef(todayString())
 
   const [record, setRecord] = useState<TimeRecord | null>(initialRecord)
   const [restMinutes, setRestMinutes] = useState(
@@ -47,7 +47,7 @@ export function PunchButtons({
   })
   const [loading, setLoading] = useState(false)
   const [isOff, setIsOff] = useState<boolean>(
-    initialRecord?.is_off ?? todayIsOff
+    initialRecord?.is_off ?? isClientHoliday(new Date(), client)
   )
   const [noteValue, setNoteValue] = useState(initialRecord?.note ?? "")
   const [noteSaving, setNoteSaving] = useState(false)
@@ -78,14 +78,14 @@ export function PunchButtons({
       } else {
         setRecord(null)
         setRestMinutes(client.default_rest_minutes)
-        setIsOff(todayIsOff)
+        setIsOff(isClientHoliday(new Date(), client))
         setNoteValue("")
         setStatus("not_started")
       }
     } catch {
       toast.error("勤怠データの取得に失敗しました")
     }
-  }, [client.id, client.default_rest_minutes, supabase, todayIsOff])
+  }, [client.id, client.default_rest_minutes, supabase, client])
 
   // Realtime subscription
   useEffect(() => {
@@ -109,6 +109,19 @@ export function PunchButtons({
       supabase.removeChannel(channel)
     }
   }, [client.id, supabase, fetchTodayRecord])
+
+  // 日付変更検知
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentDate = todayString()
+      if (currentDate !== dateRef.current) {
+        dateRef.current = currentDate
+        fetchTodayRecord()
+      }
+    }, 60_000)
+
+    return () => clearInterval(interval)
+  }, [fetchTodayRecord])
 
   const handlePunchIn = async () => {
     setLoading(true)
